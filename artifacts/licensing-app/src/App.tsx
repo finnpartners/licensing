@@ -47,7 +47,7 @@ function Router() {
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/dashboard">
-        <AuthGuard><Dashboard /></AuthGuard>
+        <Redirect to="/" />
       </Route>
       <Route path="/clients">
         <AuthGuard><Clients /></AuthGuard>

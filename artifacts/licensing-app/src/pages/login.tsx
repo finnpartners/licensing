@@ -20,7 +20,7 @@ export default function Login() {
   }, []);
 
   const handleLogin = () => {
-    window.location.href = `${BASE}/api/auth/login?redirect=/dashboard`;
+    window.location.href = `${BASE}/api/auth/login?redirect=/`;
   };
 
   const handleDevLogin = async () => {
@@ -29,7 +29,7 @@ export default function Login() {
       credentials: "include",
     });
     if (res.ok) {
-      window.location.href = `${BASE}/dashboard`;
+      window.location.href = `${BASE}/`;
     }
   };
 

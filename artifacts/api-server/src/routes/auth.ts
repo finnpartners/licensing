@@ -52,7 +52,7 @@ router.get("/auth/login", (req, res) => {
     const state = crypto.randomBytes(32).toString("hex");
     req.session.oauthState = state;
 
-    const frontendRedirect = (req.query.redirect as string) || "/dashboard";
+    const frontendRedirect = (req.query.redirect as string) || "/";
     req.session.postLoginRedirect = frontendRedirect;
 
     const authorizeUrl = getAuthorizeUrl(state);
@@ -100,7 +100,7 @@ router.get("/auth/callback", async (req, res) => {
       return;
     }
 
-    const postLoginRedirect = req.session.postLoginRedirect || "/dashboard";
+    const postLoginRedirect = req.session.postLoginRedirect || "/";
 
     await new Promise<void>((resolve, reject) => {
       req.session.regenerate((err) => {
