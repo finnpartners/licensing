@@ -71,7 +71,7 @@ export default function Dashboard() {
       <div className="mt-12">
         <h2 className="text-2xl font-display font-bold text-slate-900 mb-6">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-           <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-indigo-500" onClick={() => window.location.href='/licenses'}>
+           <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-indigo-500" onClick={() => window.location.href='/clients'}>
              <h3 className="font-bold text-lg mb-2">Issue New License</h3>
              <p className="text-slate-500 text-sm">Create and assign a new license key for a client deployment.</p>
            </Card>

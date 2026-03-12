@@ -9,7 +9,6 @@ import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Clients from "@/pages/clients";
 import Products from "@/pages/products";
-import Licenses from "@/pages/licenses";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
@@ -56,7 +55,7 @@ function Router() {
         <AuthGuard><Products /></AuthGuard>
       </Route>
       <Route path="/licenses">
-        <AuthGuard><Licenses /></AuthGuard>
+        <Redirect to="/clients" />
       </Route>
       <Route path="/settings">
         <AuthGuard><Settings /></AuthGuard>
