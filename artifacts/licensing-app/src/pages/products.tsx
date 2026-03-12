@@ -61,7 +61,7 @@ export default function Products() {
     <div>
       <PageHeader 
         title="Products" 
-        description="Register WordPress plugins to distribute"
+        description="Register repositories to distribute"
         action={<Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Add Product</Button>}
       />
 
