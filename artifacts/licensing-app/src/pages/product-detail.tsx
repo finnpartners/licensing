@@ -16,10 +16,10 @@ export default function ProductDetail() {
   const productId = parseInt(params.id || "0", 10);
 
   const { data: product, isLoading: productLoading } = useGetProduct(productId, {
-    query: { enabled: productId > 0 },
+    query: { enabled: productId > 0 } as any,
   });
   const { data: releases, isLoading: releasesLoading } = useListProductReleases(productId, {
-    query: { enabled: productId > 0 },
+    query: { enabled: productId > 0 } as any,
   });
   const { poll } = useProductMutations();
 

@@ -109,9 +109,12 @@ export default function Clients() {
   };
 
   const onLicenseSubmit = (data: LicenseForm) => {
+    const clientId = licenseForClientId || data.clientId;
+    if (!clientId) return;
+
     const payload = {
       ...data,
-      clientId: licenseForClientId || data.clientId || null,
+      clientId,
       productIds: data.pluginAccess === "specific" ? data.productIds : null,
     };
 
