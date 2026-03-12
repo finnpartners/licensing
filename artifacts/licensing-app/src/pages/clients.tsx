@@ -11,63 +11,8 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit2, Trash2, Users, Key, ChevronDown, ChevronRight, Copy, Check, ToggleLeft, ToggleRight, Globe } from "lucide-react";
-import { formatDate } from "@/lib/utils";
-
-interface LicenseRowProps {
-  license: { id: number; clientId?: number | null; licenseKeyPreview?: string | null; domain: string; pluginAccess: string; productIds?: number[] | null; status: string; createdAt?: string | null };
-  licenseMutations: ReturnType<typeof useLicenseMutations>;
-  openEditLicense: (license: LicenseRowProps["license"]) => void;
-}
-
-function LicenseRow({ license, licenseMutations, openEditLicense }: LicenseRowProps) {
-  return (
-    <div className="flex items-center gap-3 bg-white rounded-xl border border-slate-200 p-3">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <code className="text-xs font-mono text-slate-500">{license.licenseKeyPreview}</code>
-          <Badge variant={license.status === "active" ? "default" : "destructive"} className="text-xs">
-            {license.status}
-          </Badge>
-          <Badge variant={license.pluginAccess === "all" ? "secondary" : "outline"} className="text-xs">
-            {license.pluginAccess === "all" ? "All Plugins" : "Specific"}
-          </Badge>
-        </div>
-        <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-500">
-          <Globe className="w-3 h-3" />
-          {license.domain}
-          <span className="mx-1">·</span>
-          {formatDate(license.createdAt)}
-        </div>
-      </div>
-      <div className="flex items-center gap-1 shrink-0">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => licenseMutations.toggle.mutate({ id: license.id })}
-          title={license.status === "active" ? "Revoke" : "Activate"}
-        >
-          {license.status === "active" ? (
-            <ToggleRight className="w-4 h-4 text-emerald-600" />
-          ) : (
-            <ToggleLeft className="w-4 h-4 text-slate-400" />
-          )}
-        </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditLicense(license)}>
-          <Edit2 className="w-3.5 h-3.5 text-slate-500" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
-          if (confirm("Delete this license? This cannot be undone.")) {
-            licenseMutations.remove.mutate({ id: license.id });
-          }
-        }}>
-          <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-        </Button>
-      </div>
-    </div>
-  );
-}
+import { Plus, Edit2, Trash2, Users, Key, Copy, Check, ToggleLeft, ToggleRight, Globe, ArrowLeft, Building2, Mail } from "lucide-react";
+import { cn, formatDate } from "@/lib/utils";
 
 const clientSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -92,7 +37,7 @@ export default function Clients() {
   const { data: products } = useListProducts();
   const clientMutations = useClientMutations();
 
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
   const [clientDialogOpen, setClientDialogOpen] = useState(false);
   const [editingClientId, setEditingClientId] = useState<number | null>(null);
 
@@ -113,6 +58,10 @@ export default function Clients() {
     defaultValues: { pluginAccess: "all", productIds: [] },
   });
   const pluginAccess = licenseForm.watch("pluginAccess");
+
+  const selectedClient = clients?.find((c) => c.id === selectedClientId);
+  const clientLicenses = licenses?.filter((l) => l.clientId === selectedClientId) || [];
+  const unassignedLicenses = licenses?.filter((l) => !l.clientId) || [];
 
   const openCreateClient = () => {
     setEditingClientId(null);
@@ -138,7 +87,7 @@ export default function Clients() {
       clientMutations.create.mutate({ data }, {
         onSuccess: (result) => {
           setClientDialogOpen(false);
-          setExpandedId(result.id);
+          setSelectedClientId(result.id);
           openCreateLicense(result.id);
         }
       });
@@ -187,16 +136,10 @@ export default function Clients() {
     }
   };
 
-  const getLicensesForClient = (clientId: number) => {
-    return licenses?.filter((l) => l.clientId === clientId) || [];
-  };
-
-  const unassignedLicenses = licenses?.filter((l) => !l.clientId) || [];
-
   return (
     <div>
       <PageHeader
-        title="Clients & Licenses"
+        title="Clients"
         description="Manage clients and their license keys"
         action={<Button onClick={openCreateClient}><Plus className="w-4 h-4 mr-2" /> Add Client</Button>}
       />
@@ -213,92 +156,213 @@ export default function Clients() {
           <Button onClick={openCreateClient}>Add First Client</Button>
         </div>
       ) : (
-        <div className="space-y-3">
-          {clients?.map((client) => {
-            const isExpanded = expandedId === client.id;
-            const clientLicenses = getLicensesForClient(client.id);
-
-            return (
-              <Card key={client.id} className="overflow-hidden">
-                <div
-                  className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 transition-colors"
-                  onClick={() => setExpandedId(isExpanded ? null : client.id)}
-                >
-                  <div className="text-slate-400">
-                    {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3">
-                      <span className="font-semibold text-slate-900">{client.name}</span>
-                      {client.company && <span className="text-sm text-slate-500">{client.company}</span>}
-                    </div>
-                    {client.email && <div className="text-sm text-slate-500 mt-0.5">{client.email}</div>}
-                  </div>
-                  <Badge variant="secondary" className="text-xs shrink-0">
-                    <Key className="w-3 h-3 mr-1" />
-                    {client.licenseCount} {client.licenseCount === 1 ? "license" : "licenses"}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-2 space-y-1.5">
+            {clients?.map((client) => (
+              <button
+                key={client.id}
+                onClick={() => setSelectedClientId(selectedClientId === client.id ? null : client.id)}
+                className={cn(
+                  "w-full text-left rounded-xl border p-3.5 transition-all duration-150",
+                  selectedClientId === client.id
+                    ? "bg-indigo-50 border-indigo-200 ring-2 ring-indigo-500/20"
+                    : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm"
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-900 truncate">{client.name}</span>
+                  <Badge variant="secondary" className="text-xs shrink-0 ml-2">
+                    {client.licenseCount}
                   </Badge>
-                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" onClick={() => openEditClient(client)}>
-                      <Edit2 className="w-4 h-4 text-slate-500" />
+                </div>
+                {(client.company || client.email) && (
+                  <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500">
+                    {client.company && (
+                      <span className="flex items-center gap-1 truncate">
+                        <Building2 className="w-3 h-3 shrink-0" />
+                        {client.company}
+                      </span>
+                    )}
+                    {client.email && (
+                      <span className="flex items-center gap-1 truncate">
+                        <Mail className="w-3 h-3 shrink-0" />
+                        {client.email}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </button>
+            ))}
+
+            {unassignedLicenses.length > 0 && (
+              <button
+                onClick={() => setSelectedClientId(-1)}
+                className={cn(
+                  "w-full text-left rounded-xl border p-3.5 transition-all duration-150 mt-4",
+                  selectedClientId === -1
+                    ? "bg-amber-50 border-amber-200 ring-2 ring-amber-500/20"
+                    : "bg-white border-dashed border-slate-300 hover:border-amber-300 hover:shadow-sm"
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-amber-700">Unassigned</span>
+                  <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
+                    {unassignedLicenses.length}
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Licenses not linked to any client</p>
+              </button>
+            )}
+          </div>
+
+          <div className="lg:col-span-3">
+            {selectedClientId === -1 ? (
+              <Card className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-display font-bold text-slate-900">Unassigned Licenses</h2>
+                    <p className="text-sm text-slate-500 mt-1">Edit a license to reassign it to a client.</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {unassignedLicenses.map((license) => (
+                    <div key={license.id} className="flex items-center gap-3 rounded-xl border border-slate-200 p-3 bg-slate-50/50">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <code className="text-xs font-mono text-slate-500">{license.licenseKeyPreview}</code>
+                          <Badge variant={license.status === "active" ? "default" : "destructive"} className="text-xs">
+                            {license.status}
+                          </Badge>
+                          <Badge variant={license.pluginAccess === "all" ? "secondary" : "outline"} className="text-xs">
+                            {license.pluginAccess === "all" ? "All Plugins" : "Specific"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-500">
+                          <Globe className="w-3 h-3" />
+                          {license.domain}
+                          <span className="mx-1">·</span>
+                          {formatDate(license.createdAt)}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => licenseMutations.toggle.mutate({ id: license.id })} title={license.status === "active" ? "Revoke" : "Activate"}>
+                          {license.status === "active" ? <ToggleRight className="w-4 h-4 text-emerald-600" /> : <ToggleLeft className="w-4 h-4 text-slate-400" />}
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditLicense(license)}>
+                          <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                          if (confirm("Delete this license? This cannot be undone.")) licenseMutations.remove.mutate({ id: license.id });
+                        }}>
+                          <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            ) : selectedClient ? (
+              <Card className="p-6">
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-display font-bold text-slate-900">{selectedClient.name}</h2>
+                    <div className="flex items-center gap-4 mt-1.5 text-sm text-slate-500">
+                      {selectedClient.company && (
+                        <span className="flex items-center gap-1">
+                          <Building2 className="w-3.5 h-3.5" />
+                          {selectedClient.company}
+                        </span>
+                      )}
+                      {selectedClient.email && (
+                        <span className="flex items-center gap-1">
+                          <Mail className="w-3.5 h-3.5" />
+                          {selectedClient.email}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button variant="outline" size="sm" onClick={() => openEditClient(selectedClient)}>
+                      <Edit2 className="w-3.5 h-3.5 mr-1.5" /> Edit
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => {
+                    <Button variant="outline" size="sm" className="text-rose-600 hover:text-rose-700 hover:bg-rose-50" onClick={() => {
                       if (confirm("Delete this client? Existing licenses will become unassigned.")) {
-                        clientMutations.remove.mutate({ id: client.id });
+                        clientMutations.remove.mutate({ id: selectedClient.id });
+                        setSelectedClientId(null);
                       }
                     }}>
-                      <Trash2 className="w-4 h-4 text-rose-500" />
+                      <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete
                     </Button>
                   </div>
                 </div>
 
-                {isExpanded && (
-                  <div className="border-t border-slate-100 bg-slate-50/50">
-                    <div className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-semibold text-slate-700">Licenses</h3>
-                        <Button size="sm" variant="outline" onClick={() => openCreateLicense(client.id)}>
-                          <Plus className="w-3.5 h-3.5 mr-1.5" /> Add License
-                        </Button>
-                      </div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                    <Key className="w-4 h-4" />
+                    Licenses ({clientLicenses.length})
+                  </h3>
+                  <Button size="sm" onClick={() => openCreateLicense(selectedClient.id)}>
+                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Add License
+                  </Button>
+                </div>
 
-                      {clientLicenses.length === 0 ? (
-                        <div className="text-center py-8 text-slate-400 text-sm">
-                          No licenses yet.{" "}
-                          <button className="text-indigo-600 hover:underline font-medium" onClick={() => openCreateLicense(client.id)}>
-                            Create one
-                          </button>
+                {clientLicenses.length === 0 ? (
+                  <div className="text-center py-12 border border-dashed border-slate-200 rounded-xl">
+                    <Key className="w-8 h-8 text-slate-300 mx-auto mb-3" />
+                    <p className="text-sm text-slate-500">No licenses yet</p>
+                    <Button variant="link" size="sm" onClick={() => openCreateLicense(selectedClient.id)} className="mt-1">
+                      Issue first license
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {clientLicenses.map((license) => (
+                      <div key={license.id} className="flex items-center gap-3 rounded-xl border border-slate-200 p-3 bg-slate-50/50">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <code className="text-xs font-mono text-slate-500">{license.licenseKeyPreview}</code>
+                            <Badge variant={license.status === "active" ? "default" : "destructive"} className="text-xs">
+                              {license.status}
+                            </Badge>
+                            <Badge variant={license.pluginAccess === "all" ? "secondary" : "outline"} className="text-xs">
+                              {license.pluginAccess === "all" ? "All Plugins" : "Specific"}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-500">
+                            <Globe className="w-3 h-3" />
+                            {license.domain}
+                            <span className="mx-1">·</span>
+                            {formatDate(license.createdAt)}
+                          </div>
                         </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {clientLicenses.map((license) => (
-                            <LicenseRow key={license.id} license={license} licenseMutations={licenseMutations} openEditLicense={openEditLicense} />
-                          ))}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => licenseMutations.toggle.mutate({ id: license.id })} title={license.status === "active" ? "Revoke" : "Activate"}>
+                            {license.status === "active" ? <ToggleRight className="w-4 h-4 text-emerald-600" /> : <ToggleLeft className="w-4 h-4 text-slate-400" />}
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditLicense(license)}>
+                            <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                            if (confirm("Delete this license? This cannot be undone.")) licenseMutations.remove.mutate({ id: license.id });
+                          }}>
+                            <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                          </Button>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {unassignedLicenses.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-lg font-display font-bold text-slate-900 mb-3 flex items-center gap-2">
-            <Key className="w-5 h-5 text-amber-500" />
-            Unassigned Licenses
-          </h2>
-          <p className="text-sm text-slate-500 mb-4">These licenses are not linked to any client. Edit a license to reassign it.</p>
-          <Card className="overflow-hidden">
-            <div className="p-4 space-y-2">
-              {unassignedLicenses.map((license) => (
-                <LicenseRow key={license.id} license={license} licenseMutations={licenseMutations} openEditLicense={openEditLicense} />
-              ))}
-            </div>
-          </Card>
+            ) : (
+              <Card className="p-6">
+                <div className="text-center py-16">
+                  <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                  <p className="text-slate-500 font-medium">Select a client to view their licenses</p>
+                  <p className="text-sm text-slate-400 mt-1">Click on a client in the list to get started</p>
+                </div>
+              </Card>
+            )}
+          </div>
         </div>
       )}
 

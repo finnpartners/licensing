@@ -7,7 +7,7 @@ import { useGetMe } from "@workspace/api-client-react";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/clients", label: "Clients & Licenses", icon: Users },
+  { href: "/clients", label: "Clients", icon: Users },
   { href: "/products", label: "Products", icon: Package },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
