@@ -121,7 +121,43 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 - `pnpm run build` — typecheck + build all packages
 - `pnpm run typecheck` — tsc --build
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks/schemas from OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push schema to database
+- `pnpm --filter @workspace/db run push` — push schema directly to database (dev only)
+- `pnpm --filter @workspace/db run generate` — generate a new migration file from schema changes
+- `pnpm --filter @workspace/db run migrate` — run pending migrations against the database
+
+## Database Migrations
+
+Migrations are managed by Drizzle Kit. Migration files live in `shared/db/migrations/`.
+
+### Making schema changes
+
+1. Edit the schema files in `shared/db/src/schema/`
+2. Generate a migration file:
+   ```bash
+   pnpm --filter @workspace/db run generate
+   ```
+   This compares your schema to the previous snapshot and creates a new `.sql` file in `shared/db/migrations/`.
+3. Review the generated SQL in `shared/db/migrations/` to make sure it looks correct.
+4. Apply the migration:
+   ```bash
+   pnpm --filter @workspace/db run migrate
+   ```
+
+### Production deployment
+
+Run migrations before starting the server:
+```bash
+pnpm --filter @workspace/db run migrate
+```
+The migrate script is idempotent — it tracks which migrations have already been applied in the `drizzle.__drizzle_migrations` table and only runs new ones.
+
+### Dev shortcut
+
+For quick iteration in development, you can still use `push` to sync the schema directly without creating migration files:
+```bash
+pnpm --filter @workspace/db run push
+```
+This should not be used for production.
 
 ## Packages
 
@@ -132,7 +168,7 @@ Express 5 API server with admin CRUD routes and public licensing API. Uses Helme
 React + Vite frontend with dark navy sidebar, admin pages for clients/products/licenses/settings.
 
 ### `shared/db` (`@workspace/db`)
-Drizzle ORM schema and PostgreSQL connection. Exports pool, db instance, and all table schemas.
+Drizzle ORM schema, migrations, and PostgreSQL connection. Exports pool, db instance, and all table schemas. Migration files in `shared/db/migrations/`.
 
 ### `shared/api-spec` (`@workspace/api-spec`)
 OpenAPI 3.1 spec and Orval codegen config.
