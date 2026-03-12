@@ -545,7 +545,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Settings"
 
-  /finn/v1/status:
+  /status:
     get:
       operationId: publicStatus
       tags: [public]
@@ -558,7 +558,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/PublicStatus"
 
-  /finn/v1/validate:
+  /validate:
     post:
       operationId: publicValidate
       tags: [public]
@@ -583,7 +583,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ValidateResponse"
 
-  /finn/v1/products:
+  /products:
     get:
       operationId: publicProducts
       tags: [public]
@@ -615,7 +615,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /finn/v1/update-check:
+  /update-check:
     get:
       operationId: publicUpdateCheck
       tags: [public]
@@ -644,7 +644,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/UpdateCheckResponse"
 
-  /finn/v1/download:
+  /download:
     get:
       operationId: publicDownload
       tags: [public]

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useLocation } from "wouter";
 import { PageHeader } from "@/components/layout/AppLayout";
 import { useListClients } from "@workspace/api-client-react";
 import { useClientMutations } from "@/hooks/use-api-wrappers";
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Edit2, Trash2, Users } from "lucide-react";
+import { Plus, Edit2, Trash2, Users, Key } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 const clientSchema = z.object({
@@ -23,9 +24,13 @@ type ClientForm = z.infer<typeof clientSchema>;
 export default function Clients() {
   const { data: clients, isLoading } = useListClients();
   const { create, update, remove } = useClientMutations();
+  const [, navigate] = useLocation();
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [licensePromptOpen, setLicensePromptOpen] = useState(false);
+  const [newClientId, setNewClientId] = useState<number | null>(null);
+  const [newClientName, setNewClientName] = useState("");
   
   const { register, handleSubmit, reset, formState: { errors } } = useForm<ClientForm>({
     resolver: zodResolver(clientSchema)
@@ -37,7 +42,7 @@ export default function Clients() {
     setDialogOpen(true);
   };
 
-  const openEdit = (client: any) => {
+  const openEdit = (client: { id: number; name: string; company?: string | null; email?: string | null; notes?: string | null }) => {
     setEditingId(client.id);
     reset({
       name: client.name,
@@ -52,7 +57,14 @@ export default function Clients() {
     if (editingId) {
       update.mutate({ id: editingId, data }, { onSuccess: () => setDialogOpen(false) });
     } else {
-      create.mutate({ data }, { onSuccess: () => setDialogOpen(false) });
+      create.mutate({ data }, {
+        onSuccess: (result) => {
+          setDialogOpen(false);
+          setNewClientId(result.id);
+          setNewClientName(result.name);
+          setLicensePromptOpen(true);
+        }
+      });
     }
   };
 
@@ -152,6 +164,31 @@ export default function Clients() {
               <Button type="submit" disabled={create.isPending || update.isPending}>Save Client</Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={licensePromptOpen} onOpenChange={setLicensePromptOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create a License?</DialogTitle>
+          </DialogHeader>
+          <div className="mt-2">
+            <p className="text-slate-600">
+              <span className="font-semibold text-slate-900">{newClientName}</span> doesn't have any licenses yet. Would you like to create one now?
+            </p>
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={() => setLicensePromptOpen(false)}>
+              Not Now
+            </Button>
+            <Button onClick={() => {
+              setLicensePromptOpen(false);
+              navigate(`/licenses?newForClient=${newClientId}`);
+            }}>
+              <Key className="w-4 h-4 mr-2" />
+              Create License
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

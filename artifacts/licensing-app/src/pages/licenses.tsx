@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useSearch, useLocation } from "wouter";
 import { PageHeader } from "@/components/layout/AppLayout";
 import { useListLicenses, useListClients, useListProducts } from "@workspace/api-client-react";
 import { useLicenseMutations } from "@/hooks/use-api-wrappers";
@@ -27,11 +28,14 @@ export default function Licenses() {
   const { data: licenses, isLoading } = useListLicenses();
   const { data: clients } = useListClients();
   const { data: products } = useListProducts();
+  const searchString = useSearch();
+  const [, navigate] = useLocation();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [newLicenseKey, setNewLicenseKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [autoOpenHandled, setAutoOpenHandled] = useState(false);
 
   const { create, update, remove, toggle } = useLicenseMutations((key) => {
     setNewLicenseKey(key);
@@ -44,6 +48,22 @@ export default function Licenses() {
   });
 
   const pluginAccess = watch("pluginAccess");
+
+  useEffect(() => {
+    if (autoOpenHandled || !clients) return;
+    const params = new URLSearchParams(searchString);
+    const clientIdParam = params.get("newForClient");
+    if (clientIdParam) {
+      const clientId = parseInt(clientIdParam, 10);
+      if (!isNaN(clientId)) {
+        setEditingId(null);
+        reset({ clientId, domain: "", pluginAccess: "all", productIds: [], status: "active" });
+        setDialogOpen(true);
+        navigate("/licenses", { replace: true });
+      }
+      setAutoOpenHandled(true);
+    }
+  }, [searchString, clients, autoOpenHandled, reset, navigate]);
 
   const openCreate = () => {
     setEditingId(null);

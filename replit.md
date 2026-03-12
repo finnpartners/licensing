@@ -25,7 +25,7 @@ Full-stack web application for managing WordPress plugin licenses. Built with Re
 - Product management (CRUD + GitHub release polling)
 - License management (CRUD + toggle active/revoked, auto-generated UUID keys)
 - Settings (encrypted GitHub PAT, auto-generated API key with regeneration)
-- Public API at `/api/finn/v1/*` for license validation, update checks, and download proxy
+- Public API at `/api/*` for license validation, update checks, and download proxy
 - Rate limiting on validation endpoint (60 req/hr per IP)
 - Domain normalization (strips scheme, www, trailing slashes)
 
@@ -94,11 +94,11 @@ artifacts-monorepo/
 - `POST /api/admin/settings/regenerate-api-key` — Regenerate global API key
 
 ### Public
-- `GET /api/finn/v1/status` — Health check
-- `POST /api/finn/v1/validate` — Validate license (rate-limited)
-- `GET /api/finn/v1/products` — List products (Bearer token auth)
-- `GET /api/finn/v1/update-check` — Check for plugin updates
-- `GET /api/finn/v1/download` — Download plugin ZIP (proxied through GitHub)
+- `GET /api/status` — Health check
+- `POST /api/validate` — Validate license (rate-limited)
+- `GET /api/products` — List products (Bearer token auth)
+- `GET /api/update-check` — Check for plugin updates
+- `GET /api/download` — Download plugin ZIP (proxied through GitHub)
 
 ## TypeScript & Composite Projects
 

@@ -8,11 +8,11 @@ import { decrypt } from "../lib/encryption";
 
 const router: IRouter = Router();
 
-router.get("/finn/v1/status", (_req, res) => {
+router.get("/status", (_req, res) => {
   res.json({ status: "ok", version: "1.0.0" });
 });
 
-router.post("/finn/v1/validate", async (req, res) => {
+router.post("/validate", async (req, res) => {
   const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
     || req.headers["x-real-ip"] as string
     || req.socket.remoteAddress
@@ -46,7 +46,7 @@ router.post("/finn/v1/validate", async (req, res) => {
   }
 });
 
-router.get("/finn/v1/products", async (req, res) => {
+router.get("/products", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -97,7 +97,7 @@ router.get("/finn/v1/products", async (req, res) => {
   }
 });
 
-router.get("/finn/v1/update-check", async (req, res) => {
+router.get("/update-check", async (req, res) => {
   const noUpdate = { version: null };
 
   try {
@@ -142,7 +142,7 @@ router.get("/finn/v1/update-check", async (req, res) => {
     }
 
     const baseUrl = `${req.protocol}://${req.get("host")}`;
-    const downloadUrl = `${baseUrl}/api/finn/v1/download?product_id=${productId}&license=${licenseKey}&fingerprint=${fingerprint}`;
+    const downloadUrl = `${baseUrl}/api/download?product_id=${productId}&license=${licenseKey}&fingerprint=${fingerprint}`;
 
     res.json({
       version: product.latestVersion,
@@ -161,7 +161,7 @@ router.get("/finn/v1/update-check", async (req, res) => {
   }
 });
 
-router.get("/finn/v1/download", async (req, res) => {
+router.get("/download", async (req, res) => {
   try {
     const productId = req.query.product_id as string;
     const licenseKey = req.query.license as string;
