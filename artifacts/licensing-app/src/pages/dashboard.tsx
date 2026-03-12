@@ -43,7 +43,7 @@ export default function Dashboard() {
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
-          title="Total Clients" 
+          title="Clients" 
           value={data?.clientCount || 0} 
           icon={Users} 
           colorClass="bg-blue-100 text-blue-600"
