@@ -1,6 +1,6 @@
 # FINN Licensing
 
-A standalone full-stack licensing server for managing clients, products, licenses, and delivering plugin updates. Built with React, Express, and PostgreSQL. Replaces the WordPress-based `fp-licensing-server` plugin with a dedicated, self-hosted application.
+A standalone full-stack licensing server for managing clients, products, licenses, and delivering updates. Built with React, Express, and PostgreSQL. 
 
 ## What It Does
 
