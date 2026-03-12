@@ -136,15 +136,6 @@ export interface LicenseCreated {
   licenseKey: string;
 }
 
-export interface Settings {
-  apiKey: string;
-  hasGithubToken: boolean;
-}
-
-export interface SettingsInput {
-  githubToken?: string | null;
-}
-
 export interface PublicStatus {
   status: string;
   version: string;

@@ -1,6 +1,6 @@
 {
-  "id": "35f20dca-4a25-4f1c-922e-9861c4af86f8",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "504cb803-e484-42f5-b8e9-45132d595f54",
+  "prevId": "35f20dca-4a25-4f1c-922e-9861c4af86f8",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -330,45 +330,6 @@
           "nullsNotDistinct": false,
           "columns": [
             "license_key"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.finn_settings": {
-      "name": "finn_settings",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "value": {
-          "name": "value",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "finn_settings_key_unique": {
-          "name": "finn_settings_key_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "key"
           ]
         }
       },

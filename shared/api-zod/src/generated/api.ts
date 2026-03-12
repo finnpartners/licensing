@@ -375,34 +375,6 @@ export const ToggleLicenseResponse = zod.object({
 });
 
 /**
- * @summary Get settings
- */
-export const GetSettingsResponse = zod.object({
-  apiKey: zod.string(),
-  hasGithubToken: zod.boolean(),
-});
-
-/**
- * @summary Update settings
- */
-export const UpdateSettingsBody = zod.object({
-  githubToken: zod.string().nullish(),
-});
-
-export const UpdateSettingsResponse = zod.object({
-  apiKey: zod.string(),
-  hasGithubToken: zod.boolean(),
-});
-
-/**
- * @summary Regenerate global API key
- */
-export const RegenerateApiKeyResponse = zod.object({
-  apiKey: zod.string(),
-  hasGithubToken: zod.boolean(),
-});
-
-/**
  * @summary Public status check
  */
 export const PublicStatusResponse = zod.object({

@@ -25,7 +25,6 @@ Full-stack web application for managing WordPress plugin licenses. Built with Re
 - Client management (CRUD)
 - Product management (CRUD + GitHub release polling)
 - License management (CRUD + toggle active/revoked, auto-generated UUID keys)
-- Settings (encrypted GitHub PAT, auto-generated API key with regeneration)
 - Public API at `/api/*` for license validation, update checks, and download proxy
 - Rate limiting on validation endpoint (60 req/hr per IP)
 - Domain normalization (strips scheme, www, trailing slashes)
@@ -35,7 +34,8 @@ Full-stack web application for managing WordPress plugin licenses. Built with Re
 
 - `DATABASE_URL` — PostgreSQL connection string (auto-provided by Replit)
 - `SESSION_SECRET` — Required. Session signing secret
-- `ENCRYPTION_KEY` — Required. Used to encrypt/decrypt stored secrets (API key, GitHub PAT)
+- `GITHUB_PAT` — GitHub Personal Access Token for syncing private repos and proxying downloads
+- `FINN_API_KEY` — API key for WordPress plugin authentication via Bearer token (used by the public `/api/products` endpoint)
 - `CORS_ORIGIN` — Required in production. Comma-separated allowed origins
 - `APP_BASE_URL` — Optional. Base URL for post-login redirect
 - `APP_PATH` — Optional. Frontend app path prefix
@@ -53,10 +53,10 @@ artifacts-monorepo/
 │   │   └── src/
 │   │       ├── routes/     # auth, admin-*, public routes
 │   │       ├── middlewares/ # auth, csrf middlewares
-│   │       └── lib/        # domain, encryption, rate-limit, github-poller
+│   │       └── lib/        # domain, rate-limit, github-poller, easy-auth
 │   └── licensing-app/      # React frontend (Vite)
 │       └── src/
-│           ├── pages/      # login, dashboard, clients, products, product-detail, settings
+│           ├── pages/      # login, dashboard, clients, products, product-detail
 │           ├── hooks/      # use-api-wrappers (mutation hooks with invalidation)
 │           └── components/ # layout/AppLayout, ui/* (shadcn)
 ├── shared/
@@ -64,11 +64,7 @@ artifacts-monorepo/
 │   ├── api-client-react/   # Generated React Query hooks
 │   ├── api-zod/            # Generated Zod schemas from OpenAPI
 │   └── db/                 # Drizzle ORM schema + DB connection
-│       └── src/schema/     # clients, products, releases, licenses, settings, users, sessions
-├── scripts/                # Utility scripts
-│   └── src/
-│       ├── seed-admin.ts   # Create default admin user (legacy, not needed with SSO)
-│       └── clear-settings.ts
+│       └── src/schema/     # clients, products, releases, licenses, sessions
 ├── wp-client/              # WordPress integration files
 │   ├── class-finn-licensing-client.php  # Generic drop-in licensing client
 │   └── fp-dev-dashboard.php             # FINN DEV Dashboard plugin
@@ -83,7 +79,6 @@ artifacts-monorepo/
 - `finn_products` — Products/plugins (name, slug, githubRepo, version info, download URL)
 - `finn_releases` — Release history per product (version, tagName, changelog, download URLs, publishedAt)
 - `finn_licenses` — License keys (UUID key, domain, client ref, plugin access, status)
-- `finn_settings` — Key-value settings store (encrypted values)
 - `finn_sessions` — Session store (connect-pg-simple)
 
 ## API Routes
@@ -99,15 +94,13 @@ artifacts-monorepo/
 - `GET /api/admin/products/:id/releases` — List all releases for a product
 - `POST /api/admin/products/:id/poll` — Poll GitHub for all releases and sync
 - `POST /api/admin/licenses/:id/toggle` — Toggle license active/revoked
-- `GET/PUT /api/admin/settings` — Settings management
-- `POST /api/admin/settings/regenerate-api-key` — Regenerate global API key
 
 ### Public
 - `GET /api/status` — Health check
 - `POST /api/validate` — Validate license (rate-limited)
-- `GET /api/products` — List products (Bearer token auth)
+- `GET /api/products` — List products (Bearer token auth via `FINN_API_KEY`)
 - `GET /api/update-check` — Check for plugin updates
-- `GET /api/download` — Download plugin ZIP (proxied through GitHub)
+- `GET /api/download` — Download plugin ZIP (proxied through GitHub using `GITHUB_PAT`)
 
 ## TypeScript & Composite Projects
 
@@ -176,7 +169,7 @@ This should not be used for production.
 Express 5 API server with admin CRUD routes and public licensing API. Uses Helmet for security headers. Auth via Azure Easy Auth headers.
 
 ### `artifacts/licensing-app` (`@workspace/licensing-app`)
-React + Vite frontend with dark navy sidebar, admin pages for clients/products/licenses/settings.
+React + Vite frontend with dark navy sidebar, admin pages for clients/products/licenses.
 
 ### `shared/db` (`@workspace/db`)
 Drizzle ORM schema, migrations, and PostgreSQL connection. Exports pool, db instance, and all table schemas. Migration files in `shared/db/migrations/`.

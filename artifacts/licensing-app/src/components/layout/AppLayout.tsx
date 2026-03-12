@@ -1,6 +1,6 @@
 import { useState, ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Users, Package, Settings, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, Users, Package, LogOut, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthMutations } from "@/hooks/use-api-wrappers";
 import { useGetMe } from "@workspace/api-client-react";
@@ -9,7 +9,6 @@ const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/products", label: "Products", icon: Package },
-  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {

@@ -244,9 +244,9 @@ function refreshRepoCacheInBackground(headers: Record<string, string>) {
 
 router.get("/admin/github/repos", async (req, res) => {
   try {
-    const headers = await getGithubHeaders();
+    const headers = getGithubHeaders();
     if (!headers["Authorization"]) {
-      res.status(400).json({ message: "GitHub token is not configured. Add it in Settings first." });
+      res.status(400).json({ message: "GitHub token is not configured. Set the GITHUB_PAT environment variable." });
       return;
     }
 

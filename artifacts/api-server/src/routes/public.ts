@@ -1,11 +1,10 @@
 import { Router, type IRouter } from "express";
 import crypto from "crypto";
 import { db } from "@workspace/db";
-import { licensesTable, productsTable, settingsTable } from "@workspace/db/schema";
+import { licensesTable, productsTable } from "@workspace/db/schema";
 import { eq, and, isNotNull, ne } from "drizzle-orm";
 import { normaliseDomain } from "../lib/domain";
 import { checkRateLimit } from "../lib/rate-limit";
-import { decrypt } from "../lib/encryption";
 
 function timingSafeCompare(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -70,22 +69,13 @@ router.get("/products", async (req, res) => {
       return;
     }
 
-    const providedKey = match[1];
-    const [apiKeySetting] = await db.select().from(settingsTable).where(eq(settingsTable.key, "api_key"));
-    if (!apiKeySetting) {
+    const storedKey = process.env.FINN_API_KEY;
+    if (!storedKey) {
       res.status(401).json({ message: "Unauthorized" });
       return;
     }
 
-    let storedKey: string;
-    try {
-      storedKey = decrypt(apiKeySetting.value);
-    } catch {
-      res.status(401).json({ message: "Unauthorized" });
-      return;
-    }
-
-    if (!timingSafeCompare(providedKey, storedKey)) {
+    if (!timingSafeCompare(match[1], storedKey)) {
       res.status(401).json({ message: "Unauthorized" });
       return;
     }
@@ -213,15 +203,7 @@ router.get("/download", async (req, res) => {
       return;
     }
 
-    let githubToken = "";
-    const [tokenSetting] = await db.select().from(settingsTable).where(eq(settingsTable.key, "github_token"));
-    if (tokenSetting) {
-      try {
-        githubToken = decrypt(tokenSetting.value);
-      } catch {
-        githubToken = "";
-      }
-    }
+    const githubToken = process.env.GITHUB_PAT || "";
 
     const isZipball = product.downloadUrl.includes("/zipball/");
     const headers: Record<string, string> = {

@@ -18,8 +18,6 @@ tags:
     description: Product management
   - name: licenses
     description: License management
-  - name: settings
-    description: Settings management
   - name: public
     description: Public licensing endpoints
 
@@ -504,49 +502,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /admin/settings:
-    get:
-      operationId: getSettings
-      tags: [settings]
-      summary: Get settings
-      responses:
-        "200":
-          description: Current settings
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Settings"
-    put:
-      operationId: updateSettings
-      tags: [settings]
-      summary: Update settings
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SettingsInput"
-      responses:
-        "200":
-          description: Settings updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Settings"
-
-  /admin/settings/regenerate-api-key:
-    post:
-      operationId: regenerateApiKey
-      tags: [settings]
-      summary: Regenerate global API key
-      responses:
-        "200":
-          description: New API key
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Settings"
-
   /status:
     get:
       operationId: publicStatus
@@ -942,24 +897,6 @@ components:
       required:
         - license
         - licenseKey
-
-    Settings:
-      type: object
-      properties:
-        apiKey:
-          type: string
-        hasGithubToken:
-          type: boolean
-      required:
-        - apiKey
-        - hasGithubToken
-
-    SettingsInput:
-      type: object
-      properties:
-        githubToken:
-          type: string
-          nullable: true
 
     PublicStatus:
       type: object

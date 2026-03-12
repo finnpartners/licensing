@@ -29,8 +29,6 @@ export * from "./publicProducts200";
 export * from "./publicStatus";
 export * from "./publicUpdateCheckParams";
 export * from "./release";
-export * from "./settings";
-export * from "./settingsInput";
 export * from "./updateCheckResponse";
 export * from "./updateCheckResponseSections";
 export * from "./validateRequest";

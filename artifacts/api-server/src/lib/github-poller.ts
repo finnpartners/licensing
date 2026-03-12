@@ -1,7 +1,6 @@
 import { db } from "@workspace/db";
-import { productsTable, releasesTable, settingsTable } from "@workspace/db/schema";
+import { productsTable, releasesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
-import { decrypt } from "./encryption";
 
 interface GitHubAsset {
   name: string;
@@ -17,17 +16,15 @@ interface GitHubRelease {
   prerelease?: boolean;
 }
 
-export async function getGithubHeaders(): Promise<Record<string, string>> {
+export function getGithubHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
     "User-Agent": "FINN-Licensing-Server/1.0.0",
   };
 
-  const [tokenSetting] = await db.select().from(settingsTable).where(eq(settingsTable.key, "github_token"));
-  if (tokenSetting) {
-    try {
-      headers["Authorization"] = `Bearer ${decrypt(tokenSetting.value)}`;
-    } catch {}
+  const token = process.env.GITHUB_PAT;
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   return headers;
@@ -112,7 +109,7 @@ export async function pollProduct(productId: number): Promise<{ success: boolean
     return { success: false, message: "Product not found" };
   }
 
-  const headers = await getGithubHeaders();
+  const headers = getGithubHeaders();
   const repo = product.githubRepo;
 
   try {

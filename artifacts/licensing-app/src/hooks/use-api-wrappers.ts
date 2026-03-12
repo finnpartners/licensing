@@ -19,13 +19,9 @@ import {
   useDeleteLicense,
   useToggleLicense,
   getListLicensesQueryKey,
-  useUpdateSettings,
-  useRegenerateApiKey,
-  getGetSettingsQueryKey,
   getGetDashboardQueryKey
 } from "@workspace/api-client-react";
 
-// Centralized wrappers to automatically handle TanStack Query invalidation and Toasts
 function extractError(err: any) {
   return err?.message || "An unexpected error occurred";
 }
@@ -121,18 +117,5 @@ export function useLicenseMutations(onCreated?: (key: string) => void) {
     update: useUpdateLicense({ mutation: { onSuccess: () => { onSuccess(); toast({ title: "License updated", variant: "success" }) }, onError } }),
     remove: useDeleteLicense({ mutation: { onSuccess: () => { onSuccess(); toast({ title: "License deleted" }) }, onError } }),
     toggle: useToggleLicense({ mutation: { onSuccess: () => { onSuccess(); toast({ title: "License status changed" }) }, onError } }),
-  };
-}
-
-export function useSettingsMutations() {
-  const qc = useQueryClient();
-  const { toast } = useToast();
-  
-  const onSuccess = () => qc.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
-  const onError = (err: any) => toast({ title: "Error", description: extractError(err), variant: "destructive" });
-
-  return {
-    update: useUpdateSettings({ mutation: { onSuccess: () => { onSuccess(); toast({ title: "Settings saved", variant: "success" }) }, onError } }),
-    regenerate: useRegenerateApiKey({ mutation: { onSuccess: () => { onSuccess(); toast({ title: "API Key regenerated", variant: "success" }) }, onError } }),
   };
 }
