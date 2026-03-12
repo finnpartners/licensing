@@ -4,6 +4,15 @@ import crypto from "crypto";
 const CSRF_COOKIE = "finn.csrf";
 const CSRF_HEADER = "x-csrf-token";
 
+function timingSafeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  } catch {
+    return false;
+  }
+}
+
 export function csrfProtection(req: Request, res: Response, next: NextFunction): void {
   if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") {
     ensureCsrfCookie(req, res);
@@ -14,7 +23,7 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
   const cookieToken = req.cookies?.[CSRF_COOKIE];
   const headerToken = req.headers[CSRF_HEADER] as string | undefined;
 
-  if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+  if (!cookieToken || !headerToken || !timingSafeCompare(cookieToken, headerToken)) {
     res.status(403).json({ message: "Invalid CSRF token" });
     return;
   }

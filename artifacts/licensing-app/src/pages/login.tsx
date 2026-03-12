@@ -1,61 +1,36 @@
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useAuthMutations } from "@/hooks/use-api-wrappers";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Loader2 } from "lucide-react";
 
-const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export default function Login() {
-  const { login } = useAuthMutations();
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema)
-  });
-
-  const onSubmit = (data: LoginForm) => {
-    login.mutate({ data });
+  const handleLogin = () => {
+    window.location.href = `${BASE}/api/auth/login?redirect=/dashboard`;
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="w-full max-w-md bg-white p-8 sm:p-10 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 mx-4">
-        <h2 className="text-3xl font-display font-bold text-slate-950 mb-2">Welcome back</h2>
-        <p className="text-slate-500 mb-8">Sign in to the admin dashboard</p>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Username</label>
-            <Input 
-              {...register("username")} 
-              placeholder="Enter your username" 
-              className={errors.username ? "border-rose-300 focus-visible:ring-rose-500/10 focus-visible:border-rose-500" : ""}
-            />
-            {errors.username && <p className="text-rose-500 text-xs mt-1.5 font-medium">{errors.username.message}</p>}
+        <div className="flex justify-center mb-6">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 12L11 14L15 10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <rect x="3" y="3" width="18" height="18" rx="4" stroke="white" strokeWidth="2"/>
+            </svg>
           </div>
+        </div>
+        <h2 className="text-3xl font-display font-bold text-slate-950 mb-2 text-center">FINN Licensing</h2>
+        <p className="text-slate-500 mb-8 text-center">Sign in with your organization account</p>
 
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Password</label>
-            <Input 
-              type="password" 
-              {...register("password")} 
-              placeholder="••••••••" 
-              className={errors.password ? "border-rose-300 focus-visible:ring-rose-500/10 focus-visible:border-rose-500" : ""}
-            />
-            {errors.password && <p className="text-rose-500 text-xs mt-1.5 font-medium">{errors.password.message}</p>}
-          </div>
+        <Button onClick={handleLogin} className="w-full text-base h-12 gap-3" variant="default">
+          <svg width="20" height="20" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+            <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+            <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+            <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+            <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+          </svg>
+          Sign in with Microsoft
+        </Button>
 
-          <Button type="submit" className="w-full text-base h-12 mt-4" disabled={login.isPending}>
-            {login.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In"}
-          </Button>
-        </form>
-        
         <div className="mt-8 text-center text-sm text-slate-400">
           Internal system. Authorized access only.
         </div>

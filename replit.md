@@ -8,12 +8,13 @@ Full-stack web application for managing WordPress plugin licenses. Built with Re
 
 - **Monorepo tool**: pnpm workspaces
 - **Node.js version**: 24
-- **Package manager**: pnpm
+- **Package manager**: pnpm (internal), npm (external/README)
 - **TypeScript version**: 5.9
 - **Frontend**: React 19 + Vite + Tailwind CSS + shadcn/ui + wouter (routing) + React Query
 - **API framework**: Express 5
 - **Database**: PostgreSQL + Drizzle ORM
-- **Auth**: Session-based (bcrypt + express-session + connect-pg-simple)
+- **Auth**: Azure AD SSO (OpenID Connect authorization code flow via `jose` for JWT verification)
+- **Security**: Helmet, CSRF double-submit with timing-safe comparison, configurable CORS
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
@@ -28,16 +29,31 @@ Full-stack web application for managing WordPress plugin licenses. Built with Re
 - Public API at `/api/*` for license validation, update checks, and download proxy
 - Rate limiting on validation endpoint (60 req/hr per IP)
 - Domain normalization (strips scheme, www, trailing slashes)
+- Azure AD SSO login (no local passwords)
 
 ## Environment Variables
 
 - `DATABASE_URL` — PostgreSQL connection string (auto-provided by Replit)
 - `SESSION_SECRET` — Required. Session signing secret
 - `ENCRYPTION_KEY` — Required. Used to encrypt/decrypt stored secrets (API key, GitHub PAT)
+- `AZURE_CLIENT_ID` — Required. Azure AD Application (client) ID
+- `AZURE_CLIENT_SECRET` — Required. Azure AD client secret
+- `AZURE_TENANT_ID` — Required. Azure AD Directory (tenant) ID
+- `AZURE_REDIRECT_URI` — Required. OAuth callback URL (e.g. `https://your-domain.com/api/auth/callback`)
+- `AZURE_ALLOWED_EMAILS` — Optional. Comma-separated email allowlist for admin access
+- `AZURE_ALLOWED_DOMAIN` — Optional. Comma-separated domain allowlist (e.g. `finnpartners.com`)
+- `CORS_ORIGIN` — Required in production. Comma-separated allowed origins
+- `APP_BASE_URL` — Optional. Base URL for post-login redirect
+- `APP_PATH` — Optional. Frontend app path prefix
 
-## Default Admin Credentials
+## Authentication Flow
 
-- Username: `admin`, Password: `admin` (seeded via `pnpm --filter @workspace/scripts run seed`)
+1. User clicks "Sign in with Microsoft" on login page
+2. Browser redirects to `/api/auth/login` → server redirects to Azure AD authorize endpoint
+3. After Azure AD login, callback hits `/api/auth/callback`
+4. Server exchanges authorization code for tokens, validates ID token via JWKS
+5. Session created with user's Azure OID, email, and display name
+6. User redirected to dashboard
 
 ## Structure
 
@@ -46,9 +62,9 @@ artifacts-monorepo/
 ├── artifacts/
 │   ├── api-server/         # Express API server
 │   │   └── src/
-│   │       ├── routes/     # auth, admin-*, public routes
-│   │       ├── middlewares/ # auth middleware
-│   │       └── lib/        # domain, encryption, rate-limit, github-poller
+│   │       ├── routes/     # auth (Azure SSO), admin-*, public routes
+│   │       ├── middlewares/ # auth, csrf middlewares
+│   │       └── lib/        # azure-auth, domain, encryption, rate-limit, github-poller
 │   └── licensing-app/      # React frontend (Vite)
 │       └── src/
 │           ├── pages/      # login, dashboard, clients, products, product-detail, settings
@@ -62,8 +78,11 @@ artifacts-monorepo/
 │       └── src/schema/     # clients, products, releases, licenses, settings, users, sessions
 ├── scripts/                # Utility scripts
 │   └── src/
-│       ├── seed-admin.ts   # Create default admin user
+│       ├── seed-admin.ts   # Create default admin user (legacy, not needed with SSO)
 │       └── clear-settings.ts
+├── wp-client/              # WordPress integration files
+│   ├── class-finn-licensing-client.php  # Generic drop-in licensing client
+│   └── fp-dev-dashboard.php             # FINN DEV Dashboard plugin
 ├── pnpm-workspace.yaml
 ├── tsconfig.base.json
 └── package.json
@@ -76,17 +95,18 @@ artifacts-monorepo/
 - `finn_releases` — Release history per product (version, tagName, changelog, download URLs, publishedAt)
 - `finn_licenses` — License keys (UUID key, domain, client ref, plugin access, status)
 - `finn_settings` — Key-value settings store (encrypted values)
-- `finn_users` — Admin users (bcrypt-hashed passwords)
+- `finn_users` — Admin users (legacy table, kept for schema compatibility)
 - `finn_sessions` — Session store (connect-pg-simple)
 
 ## API Routes
 
-### Auth
-- `POST /api/auth/login` — Login with username/password
+### Auth (Azure AD SSO)
+- `GET /api/auth/login` — Redirects to Azure AD authorize endpoint
+- `GET /api/auth/callback` — Handles Azure AD callback, creates session
 - `POST /api/auth/logout` — Destroy session
-- `GET /api/auth/me` — Get current user (auth check)
+- `GET /api/auth/me` — Get current user (id, email, name)
 
-### Admin (require auth)
+### Admin (require auth + CSRF)
 - `GET /api/admin/dashboard` — Stats
 - CRUD: `/api/admin/clients`, `/api/admin/products`, `/api/admin/licenses`
 - `GET /api/admin/products/:id/releases` — List all releases for a product
@@ -115,15 +135,14 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 - `pnpm run typecheck` — tsc --build
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks/schemas from OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push schema to database
-- `pnpm --filter @workspace/scripts run seed` — seed admin user
 
 ## Packages
 
 ### `artifacts/api-server` (`@workspace/api-server`)
-Express 5 API server with session-based auth, admin CRUD routes, and public licensing API.
+Express 5 API server with Azure AD SSO, admin CRUD routes, and public licensing API. Uses Helmet for security headers.
 
 ### `artifacts/licensing-app` (`@workspace/licensing-app`)
-React + Vite frontend with dark navy sidebar, admin pages for clients/products/licenses/settings.
+React + Vite frontend with dark navy sidebar, admin pages for clients/products/licenses/settings. Login via Microsoft SSO.
 
 ### `lib/db` (`@workspace/db`)
 Drizzle ORM schema and PostgreSQL connection. Exports pool, db instance, and all table schemas.

@@ -1,10 +1,20 @@
 import { Router, type IRouter } from "express";
+import crypto from "crypto";
 import { db } from "@workspace/db";
 import { licensesTable, productsTable, settingsTable } from "@workspace/db/schema";
 import { eq, and, isNotNull, ne } from "drizzle-orm";
 import { normaliseDomain } from "../lib/domain";
 import { checkRateLimit } from "../lib/rate-limit";
 import { decrypt } from "../lib/encryption";
+
+function timingSafeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  } catch {
+    return false;
+  }
+}
 
 const router: IRouter = Router();
 
@@ -75,7 +85,7 @@ router.get("/products", async (req, res) => {
       return;
     }
 
-    if (providedKey !== storedKey) {
+    if (!timingSafeCompare(providedKey, storedKey)) {
       res.status(401).json({ message: "Unauthorized" });
       return;
     }

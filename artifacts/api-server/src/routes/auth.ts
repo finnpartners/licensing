@@ -1,52 +1,116 @@
 import { Router, type IRouter } from "express";
-import bcrypt from "bcrypt";
-import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
-import { LoginBody } from "@workspace/api-zod";
+import crypto from "crypto";
+import { getAuthorizeUrl, exchangeCodeForTokens, verifyIdToken } from "../lib/azure-auth";
 import "../types/session";
 
 const router: IRouter = Router();
 
-router.post("/auth/login", async (req, res) => {
+function timingSafeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
   try {
-    const parsed = LoginBody.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ message: "Username and password are required" });
-      return;
-    }
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  } catch {
+    return false;
+  }
+}
 
-    const { username, password } = parsed.data;
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.username, username));
+function isUserAuthorized(email: string, oid: string): boolean {
+  const allowedEmails = process.env.AZURE_ALLOWED_EMAILS;
+  const allowedDomain = process.env.AZURE_ALLOWED_DOMAIN;
 
-    if (!user) {
-      res.status(401).json({ message: "Invalid credentials" });
-      return;
-    }
+  if (allowedEmails) {
+    const emails = allowedEmails.split(",").map(e => e.trim().toLowerCase());
+    if (emails.includes(email.toLowerCase())) return true;
+  }
 
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) {
-      res.status(401).json({ message: "Invalid credentials" });
-      return;
-    }
+  if (allowedDomain) {
+    const domains = allowedDomain.split(",").map(d => d.trim().toLowerCase());
+    const emailDomain = email.split("@")[1]?.toLowerCase();
+    if (emailDomain && domains.includes(emailDomain)) return true;
+  }
 
-    req.session.userId = user.id;
-    res.json({ id: user.id, username: user.username });
+  if (!allowedEmails && !allowedDomain) {
+    return true;
+  }
+
+  return false;
+}
+
+router.get("/auth/login", (req, res) => {
+  try {
+    const state = crypto.randomBytes(32).toString("hex");
+    req.session.oauthState = state;
+
+    const frontendRedirect = (req.query.redirect as string) || "/dashboard";
+    req.session.postLoginRedirect = frontendRedirect;
+
+    const authorizeUrl = getAuthorizeUrl(state);
+    res.redirect(authorizeUrl);
   } catch (err) {
-    console.error("Login error:", err);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Login redirect error:", err);
+    res.status(500).json({ message: "Azure AD is not configured. Set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, and AZURE_REDIRECT_URI." });
   }
 });
 
-router.post("/auth/logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      res.status(500).json({ message: "Failed to logout" });
+router.get("/auth/callback", async (req, res) => {
+  try {
+    const { code, state, error, error_description } = req.query;
+
+    if (error) {
+      console.error("Azure AD error:", error, error_description);
+      res.status(401).send("Authentication failed. Please try again.");
       return;
     }
-    res.clearCookie("finn.sid");
-    res.json({ message: "Logged out" });
-  });
+
+    if (!code || typeof code !== "string") {
+      res.status(400).send("Missing authorization code.");
+      return;
+    }
+
+    const savedState = req.session.oauthState;
+    if (!state || typeof state !== "string" || !savedState || !timingSafeCompare(state, savedState)) {
+      res.status(403).send("Invalid state parameter. Possible CSRF attack.");
+      return;
+    }
+
+    delete req.session.oauthState;
+
+    const { idToken } = await exchangeCodeForTokens(code);
+    const user = await verifyIdToken(idToken);
+
+    if (!isUserAuthorized(user.email, user.oid)) {
+      console.warn(`Unauthorized login attempt: ${user.email} (${user.oid})`);
+      res.status(403).send("Access denied. Your account is not authorized to use this application.");
+      return;
+    }
+
+    const postLoginRedirect = req.session.postLoginRedirect || "/dashboard";
+
+    await new Promise<void>((resolve, reject) => {
+      req.session.regenerate((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    req.session.userId = user.oid;
+    req.session.userEmail = user.email;
+    req.session.userName = user.name;
+
+    await new Promise<void>((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    const baseUrl = process.env.APP_BASE_URL || `${req.protocol}://${req.get("host")}`;
+    const appPath = process.env.APP_PATH || "";
+    res.redirect(`${baseUrl}${appPath}${postLoginRedirect}`);
+  } catch (err) {
+    console.error("Auth callback error:", err);
+    res.status(500).send("Authentication failed. Please try again.");
+  }
 });
 
 router.get("/auth/me", async (req, res) => {
@@ -56,13 +120,11 @@ router.get("/auth/me", async (req, res) => {
     return;
   }
 
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
-  if (!user) {
-    res.status(401).json({ message: "Not authenticated" });
-    return;
-  }
-
-  res.json({ id: user.id, username: user.username });
+  res.json({
+    id: req.session.userId,
+    email: req.session.userEmail,
+    name: req.session.userName,
+  });
 });
 
 export default router;

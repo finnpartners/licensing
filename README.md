@@ -9,13 +9,14 @@ A standalone full-stack licensing server for managing clients, products, license
 - **License Management** — Issue UUID license keys tied to specific domains and products, toggle active/revoked status
 - **Update Delivery** — WordPress plugins check for updates and download new versions through the public API, gated by license validation
 - **GitHub Integration** — Polls GitHub releases (with pagination), stores full release history, proxies downloads with token auth
+- **Azure AD SSO** — Admin login via Microsoft Azure AD (OpenID Connect)
 
 ## Quick Start
 
 ### Prerequisites
 
 - Node.js 24+
-- pnpm
+- npm 10+
 - PostgreSQL database
 
 ### Environment Variables
@@ -23,31 +24,59 @@ A standalone full-stack licensing server for managing clients, products, license
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `SESSION_SECRET` | Yes | Session signing secret (any random string) |
+| `SESSION_SECRET` | Yes | Session signing secret (any random string, 32+ characters) |
 | `ENCRYPTION_KEY` | Yes | Used to encrypt stored secrets like the GitHub PAT and API key |
+| `AZURE_CLIENT_ID` | Yes | Azure AD Application (client) ID |
+| `AZURE_CLIENT_SECRET` | Yes | Azure AD client secret |
+| `AZURE_TENANT_ID` | Yes | Azure AD Directory (tenant) ID |
+| `AZURE_REDIRECT_URI` | Yes | OAuth callback URL, e.g. `https://your-domain.com/api/auth/callback` |
+| `AZURE_ALLOWED_EMAILS` | No | Comma-separated list of allowed email addresses (admin allowlist) |
+| `AZURE_ALLOWED_DOMAIN` | No | Comma-separated list of allowed email domains (e.g. `finnpartners.com`) |
+| `CORS_ORIGIN` | Yes (prod) | Comma-separated list of allowed origins (required in production) |
+| `APP_BASE_URL` | No | Base URL for post-login redirect (auto-detected if not set) |
+| `APP_PATH` | No | Frontend app path prefix if served under a subpath |
 
-### Setup
+### Azure AD Setup
+
+1. Go to [Azure Portal](https://portal.azure.com) > **Azure Active Directory** > **App registrations** > **New registration**
+2. Name: `FINN Licensing` (or any name)
+3. Supported account types: **Single tenant** (your org only)
+4. Redirect URI: **Web** — `https://your-domain.com/api/auth/callback`
+5. After creation, copy the **Application (client) ID** → set as `AZURE_CLIENT_ID`
+6. Copy the **Directory (tenant) ID** → set as `AZURE_TENANT_ID`
+7. Go to **Certificates & secrets** > **New client secret** → copy the value → set as `AZURE_CLIENT_SECRET`
+8. Go to **API permissions** > Ensure `Microsoft Graph > User.Read` is granted (default)
+9. Go to **Token configuration** > **Add optional claim** > **ID** > check `email` and `preferred_username`
+
+### Access Control
+
+By default, any user in your Azure AD tenant can log in. To restrict access:
+
+- Set `AZURE_ALLOWED_DOMAIN` to limit by email domain (e.g. `finnpartners.com`)
+- Set `AZURE_ALLOWED_EMAILS` to limit to specific email addresses (e.g. `admin@finnpartners.com,dev@finnpartners.com`)
+- If both are set, a user matching either one will be allowed
+
+### Installation
 
 ```bash
 # Install dependencies
-pnpm install
+npm install
 
 # Push database schema
-pnpm --filter @workspace/db run push
-
-# Seed the default admin user (admin/admin)
-pnpm --filter @workspace/scripts run seed
+npm run push -w lib/db
 
 # Start the API server
-pnpm --filter @workspace/api-server run dev
+npm run dev -w artifacts/api-server
 
-# Start the frontend
-pnpm --filter @workspace/licensing-app run dev
+# Start the frontend (separate terminal)
+npm run dev -w artifacts/licensing-app
 ```
 
 ### First Login
 
-Sign in with `admin` / `admin`, then go to **Settings** to:
+Click **Sign in with Microsoft** — you'll be redirected to your Azure AD login page. After authenticating, you'll land on the dashboard.
+
+Go to **Settings** to:
 
 1. Set a **GitHub Personal Access Token** (fine-grained PAT with Contents read + Metadata read on your plugin repos)
 2. Note or regenerate the **API key** (used by your WP plugin to list available products)
@@ -58,9 +87,9 @@ Sign in with `admin` / `admin`, then go to **Settings** to:
 ├── artifacts/
 │   ├── api-server/            # Express 5 API server
 │   │   └── src/
-│   │       ├── routes/        # Auth, admin CRUD, public licensing API
+│   │       ├── routes/        # Auth (Azure SSO), admin CRUD, public licensing API
 │   │       ├── middlewares/   # Session auth, CSRF protection
-│   │       └── lib/           # GitHub poller, encryption, rate limiting
+│   │       └── lib/           # Azure auth, GitHub poller, encryption, rate limiting
 │   └── licensing-app/         # React + Vite admin frontend
 │       └── src/
 │           ├── pages/         # Dashboard, Clients, Products, Product Detail, Settings
@@ -72,6 +101,17 @@ Sign in with `admin` / `admin`, then go to **Settings** to:
 │   └── db/                    # Drizzle ORM schema + connection
 └── scripts/                   # Seed admin, clear settings
 ```
+
+## Security
+
+- **Authentication**: Azure AD SSO (OpenID Connect authorization code flow)
+- **Session**: Server-side sessions stored in PostgreSQL, `httpOnly` + `secure` + `sameSite` cookies
+- **CSRF**: Double-submit cookie pattern with timing-safe comparison
+- **Headers**: Helmet middleware for security headers (X-Content-Type-Options, X-Frame-Options, etc.)
+- **Encryption**: AES-256-CBC for stored secrets (GitHub PAT, API key)
+- **Rate Limiting**: 60 requests/hour per IP on the license validation endpoint
+- **CORS**: Configurable allowed origins via `CORS_ORIGIN` environment variable
+- **API Key Comparison**: Timing-safe to prevent timing attacks
 
 ## Public API
 
@@ -142,7 +182,7 @@ new Finn_Licensing_Client( [
 
 ## Admin API
 
-All admin endpoints require session authentication and CSRF token (`x-csrf-token` header matching `finn.csrf` cookie).
+All admin endpoints require an active Azure AD session and CSRF token (`x-csrf-token` header matching `finn.csrf` cookie).
 
 - `GET/POST /api/admin/clients` — List/create clients
 - `GET/PUT/DELETE /api/admin/clients/:id` — Get/update/delete client
@@ -161,18 +201,23 @@ All admin endpoints require session authentication and CSRF token (`x-csrf-token
 ### Regenerate API client after spec changes
 
 ```bash
-pnpm --filter @workspace/api-spec run codegen
+npm run codegen -w lib/api-spec
 ```
 
 ### Type checking
 
 ```bash
-pnpm run typecheck
+npm run typecheck
 ```
 
 ### Database
 
 The schema is defined in `lib/db/src/schema/`. Tables: `finn_clients`, `finn_products`, `finn_releases`, `finn_licenses`, `finn_settings`, `finn_users`, `finn_sessions`.
+
+```bash
+# Push schema changes
+npm run push -w lib/db
+```
 
 ## Tech Stack
 
@@ -181,7 +226,8 @@ The schema is defined in `lib/db/src/schema/`. Tables: `finn_clients`, `finn_pro
 | Frontend | React 19, Vite, Tailwind CSS, shadcn/ui, wouter, React Query |
 | Backend | Express 5, TypeScript |
 | Database | PostgreSQL, Drizzle ORM |
-| Auth | Session-based (bcrypt, express-session, connect-pg-simple) |
+| Auth | Azure AD SSO (OpenID Connect), express-session |
+| Security | Helmet, CSRF double-submit, timing-safe comparisons |
 | Validation | Zod, drizzle-zod |
 | API Codegen | Orval (OpenAPI 3.1) |
 | Build | esbuild |

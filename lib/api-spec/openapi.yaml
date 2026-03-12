@@ -38,29 +38,19 @@ paths:
                 $ref: "#/components/schemas/HealthStatus"
 
   /auth/login:
-    post:
+    get:
       operationId: login
       tags: [auth]
-      summary: Login
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/LoginRequest"
+      summary: Redirect to Azure AD SSO
+      parameters:
+        - in: query
+          name: redirect
+          schema:
+            type: string
+          description: Post-login redirect path
       responses:
-        "200":
-          description: Login successful
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuthUser"
-        "401":
-          description: Invalid credentials
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+        "302":
+          description: Redirect to Azure AD
 
   /auth/logout:
     post:
@@ -733,27 +723,19 @@ components:
       required:
         - message
 
-    LoginRequest:
-      type: object
-      properties:
-        username:
-          type: string
-        password:
-          type: string
-      required:
-        - username
-        - password
-
     AuthUser:
       type: object
       properties:
         id:
-          type: integer
-        username:
+          type: string
+        email:
+          type: string
+        name:
           type: string
       required:
         - id
-        - username
+        - email
+        - name
 
     DashboardStats:
       type: object

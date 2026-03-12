@@ -2,7 +2,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import {
-  useLogin,
   useLogout,
   useCreateClient,
   useUpdateClient,
@@ -33,19 +32,7 @@ function extractError(err: any) {
 
 export function useAuthMutations() {
   const qc = useQueryClient();
-  const { toast } = useToast();
   const [, setLocation] = useLocation();
-
-  const loginMutation = useLogin({
-    mutation: {
-      onSuccess: () => {
-        qc.invalidateQueries();
-        toast({ title: "Welcome back!", variant: "success" });
-        setLocation("/dashboard");
-      },
-      onError: (err) => toast({ title: "Login failed", description: extractError(err), variant: "destructive" }),
-    },
-  });
 
   const logoutMutation = useLogout({
     mutation: {
@@ -56,7 +43,7 @@ export function useAuthMutations() {
     },
   });
 
-  return { login: loginMutation, logout: logoutMutation };
+  return { logout: logoutMutation };
 }
 
 export function useClientMutations() {

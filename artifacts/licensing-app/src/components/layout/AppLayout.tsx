@@ -96,11 +96,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
-              <div className="text-sm font-semibold text-slate-900">{user?.username}</div>
-              <div className="text-xs text-slate-500">Administrator</div>
+              <div className="text-sm font-semibold text-slate-900">{user?.name}</div>
+              <div className="text-xs text-slate-500">{user?.email}</div>
             </div>
             <div className="w-10 h-10 rounded-full bg-indigo-100 border-2 border-indigo-200 flex items-center justify-center text-indigo-700 font-bold font-display">
-              {user?.username?.charAt(0).toUpperCase() || 'A'}
+              {user?.name?.charAt(0).toUpperCase() || 'A'}
             </div>
           </div>
         </header>

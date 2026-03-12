@@ -6,9 +6,9 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface ClientInput {
-  name: string;
-  company?: string | null;
-  email?: string | null;
-  notes?: string | null;
-}
+export type LoginParams = {
+  /**
+   * Post-login redirect path
+   */
+  redirect?: string;
+};
