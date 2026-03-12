@@ -207,6 +207,41 @@ router.post("/admin/products/:id/poll", async (req, res) => {
   }
 });
 
+type CachedRepo = { full_name: string; name: string; description: string | null; private: boolean };
+let repoCache: CachedRepo[] = [];
+let repoCacheTimestamp = 0;
+const REPO_CACHE_TTL = 5 * 60 * 1000;
+let repoCacheFetching = false;
+
+async function fetchAllGithubRepos(headers: Record<string, string>): Promise<CachedRepo[]> {
+  const allRepos: CachedRepo[] = [];
+  let page = 1;
+  while (true) {
+    const repoRes = await fetch(
+      `https://api.github.com/user/repos?per_page=100&sort=updated&affiliation=owner,organization_member&page=${page}`,
+      { headers, signal: AbortSignal.timeout(15000) }
+    );
+    if (!repoRes.ok) throw new Error("GitHub API error");
+    const pageRepos = await repoRes.json() as CachedRepo[];
+    allRepos.push(...pageRepos);
+    if (pageRepos.length < 100) break;
+    page++;
+  }
+  return allRepos;
+}
+
+function refreshRepoCacheInBackground(headers: Record<string, string>) {
+  if (repoCacheFetching) return;
+  repoCacheFetching = true;
+  fetchAllGithubRepos(headers)
+    .then((repos) => {
+      repoCache = repos;
+      repoCacheTimestamp = Date.now();
+    })
+    .catch((err) => console.error("Background repo cache refresh failed:", err))
+    .finally(() => { repoCacheFetching = false; });
+}
+
 router.get("/admin/github/repos", async (req, res) => {
   try {
     const headers = await getGithubHeaders();
@@ -215,41 +250,25 @@ router.get("/admin/github/repos", async (req, res) => {
       return;
     }
 
-    const query = (req.query.q as string) || "";
+    const cacheAge = Date.now() - repoCacheTimestamp;
+    if (repoCache.length === 0 || cacheAge > REPO_CACHE_TTL) {
+      if (repoCache.length > 0) {
+        refreshRepoCacheInBackground(headers);
+      } else {
+        try {
+          repoCache = await fetchAllGithubRepos(headers);
+          repoCacheTimestamp = Date.now();
+        } catch {
+          res.status(502).json({ message: "Failed to fetch repositories from GitHub" });
+          return;
+        }
+      }
+    }
+
     const existingProducts = await db.select({ githubRepo: productsTable.githubRepo }).from(productsTable);
     const existingRepos = new Set(existingProducts.map(p => p.githubRepo.toLowerCase()));
 
-    let repos: Array<{ full_name: string; name: string; description: string | null; private: boolean }>;
-
-    const allRepos: Array<{ full_name: string; name: string; description: string | null; private: boolean }> = [];
-    let page = 1;
-    while (page <= 5) {
-      const repoRes = await fetch(
-        `https://api.github.com/user/repos?per_page=100&sort=updated&affiliation=owner,organization_member&page=${page}`,
-        { headers, signal: AbortSignal.timeout(10000) }
-      );
-      if (!repoRes.ok) {
-        res.status(502).json({ message: "Failed to fetch repositories from GitHub" });
-        return;
-      }
-      const pageRepos = await repoRes.json() as Array<{ full_name: string; name: string; description: string | null; private: boolean }>;
-      allRepos.push(...pageRepos);
-      if (pageRepos.length < 100) break;
-      page++;
-    }
-
-    if (query) {
-      const q = query.toLowerCase();
-      repos = allRepos.filter(r =>
-        r.full_name.toLowerCase().includes(q) ||
-        r.name.toLowerCase().includes(q) ||
-        (r.description && r.description.toLowerCase().includes(q))
-      );
-    } else {
-      repos = allRepos;
-    }
-
-    const result = repos.map(r => ({
+    const result = repoCache.map(r => ({
       fullName: r.full_name,
       name: r.name,
       description: r.description,
