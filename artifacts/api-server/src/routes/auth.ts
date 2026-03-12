@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import crypto from "crypto";
-import { getAuthorizeUrl, exchangeCodeForTokens, verifyIdToken } from "../lib/azure-auth";
+import { getAuthorizeUrl, exchangeCodeForTokens, verifyIdToken, isAzureConfigured } from "../lib/azure-auth";
 import "../types/session";
 
 const router: IRouter = Router();
@@ -36,7 +36,16 @@ function isUserAuthorized(email: string, oid: string): boolean {
   return false;
 }
 
+router.get("/auth/sso-status", (_req, res) => {
+  res.json({ ssoEnabled: isAzureConfigured() });
+});
+
 router.get("/auth/login", (req, res) => {
+  if (!isAzureConfigured()) {
+    res.status(503).json({ message: "SSO is not available in this environment." });
+    return;
+  }
+
   try {
     const state = crypto.randomBytes(32).toString("hex");
     req.session.oauthState = state;
@@ -48,11 +57,16 @@ router.get("/auth/login", (req, res) => {
     res.redirect(authorizeUrl);
   } catch (err) {
     console.error("Login redirect error:", err);
-    res.status(500).json({ message: "Azure AD is not configured. Set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, and AZURE_REDIRECT_URI." });
+    res.status(500).json({ message: "Azure AD configuration error." });
   }
 });
 
 router.get("/auth/callback", async (req, res) => {
+  if (!isAzureConfigured()) {
+    res.status(503).send("SSO is not available in this environment.");
+    return;
+  }
+
   try {
     const { code, state, error, error_description } = req.query;
 

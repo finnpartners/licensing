@@ -10,6 +10,15 @@ interface AzureConfig {
   redirectUri: string;
 }
 
+export function isAzureConfigured(): boolean {
+  return !!(
+    process.env.AZURE_CLIENT_ID &&
+    process.env.AZURE_CLIENT_SECRET &&
+    process.env.AZURE_TENANT_ID &&
+    process.env.AZURE_REDIRECT_URI
+  );
+}
+
 export function getAzureConfig(): AzureConfig {
   const clientId = process.env.AZURE_CLIENT_ID;
   const clientSecret = process.env.AZURE_CLIENT_SECRET;

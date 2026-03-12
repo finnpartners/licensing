@@ -36,10 +36,10 @@ Full-stack web application for managing WordPress plugin licenses. Built with Re
 - `DATABASE_URL` — PostgreSQL connection string (auto-provided by Replit)
 - `SESSION_SECRET` — Required. Session signing secret
 - `ENCRYPTION_KEY` — Required. Used to encrypt/decrypt stored secrets (API key, GitHub PAT)
-- `AZURE_CLIENT_ID` — Required. Azure AD Application (client) ID
-- `AZURE_CLIENT_SECRET` — Required. Azure AD client secret
-- `AZURE_TENANT_ID` — Required. Azure AD Directory (tenant) ID
-- `AZURE_REDIRECT_URI` — Required. OAuth callback URL (e.g. `https://your-domain.com/api/auth/callback`)
+- `AZURE_CLIENT_ID` — Optional (required for SSO). Azure AD Application (client) ID
+- `AZURE_CLIENT_SECRET` — Optional (required for SSO). Azure AD client secret
+- `AZURE_TENANT_ID` — Optional (required for SSO). Azure AD Directory (tenant) ID
+- `AZURE_REDIRECT_URI` — Optional (required for SSO). OAuth callback URL (e.g. `https://your-domain.com/api/auth/callback`)
 - `AZURE_ALLOWED_EMAILS` — Optional. Comma-separated email allowlist for admin access
 - `AZURE_ALLOWED_DOMAIN` — Optional. Comma-separated domain allowlist (e.g. `finnpartners.com`)
 - `CORS_ORIGIN` — Required in production. Comma-separated allowed origins
@@ -101,8 +101,9 @@ artifacts-monorepo/
 ## API Routes
 
 ### Auth (Azure AD SSO)
-- `GET /api/auth/login` — Redirects to Azure AD authorize endpoint
-- `GET /api/auth/callback` — Handles Azure AD callback, creates session
+- `GET /api/auth/sso-status` — Returns `{ ssoEnabled: boolean }` based on Azure env var availability
+- `GET /api/auth/login` — Redirects to Azure AD authorize endpoint (503 if SSO not configured)
+- `GET /api/auth/callback` — Handles Azure AD callback, creates session (503 if SSO not configured)
 - `POST /api/auth/logout` — Destroy session
 - `GET /api/auth/me` — Get current user (id, email, name)
 
