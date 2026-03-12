@@ -1,5 +1,6 @@
 import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { ToastProvider } from "@/hooks/use-toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useGetMe } from "@workspace/api-client-react";
@@ -11,6 +12,8 @@ import Products from "@/pages/products";
 import Licenses from "@/pages/licenses";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -66,12 +69,20 @@ function Router() {
   );
 }
 
+function CsrfInit() {
+  useEffect(() => {
+    fetch(`${BASE}/api/csrf-token`, { credentials: "include" }).catch(() => {});
+  }, []);
+  return null;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <CsrfInit />
+          <WouterRouter base={BASE}>
             <Router />
           </WouterRouter>
         </TooltipProvider>

@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { LoginBody } from "@workspace/api-zod";
+import "../types/session";
 
 const router: IRouter = Router();
 
@@ -29,7 +30,7 @@ router.post("/auth/login", async (req, res) => {
       return;
     }
 
-    (req.session as any).userId = user.id;
+    req.session.userId = user.id;
     res.json({ id: user.id, username: user.username });
   } catch (err) {
     console.error("Login error:", err);
@@ -49,7 +50,7 @@ router.post("/auth/logout", (req, res) => {
 });
 
 router.get("/auth/me", async (req, res) => {
-  const userId = (req.session as any)?.userId;
+  const userId = req.session.userId;
   if (!userId) {
     res.status(401).json({ message: "Not authenticated" });
     return;

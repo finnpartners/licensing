@@ -8,12 +8,16 @@ import adminLicensesRouter from "./admin-licenses";
 import adminSettingsRouter from "./admin-settings";
 import publicRouter from "./public";
 import { requireAuth } from "../middlewares/auth";
+import { csrfProtection, getCsrfToken } from "../middlewares/csrf";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
-router.use(authRouter);
 router.use(publicRouter);
+
+router.get("/csrf-token", getCsrfToken);
+router.use(csrfProtection);
+router.use(authRouter);
 
 router.use(requireAuth);
 router.use(adminDashboardRouter);

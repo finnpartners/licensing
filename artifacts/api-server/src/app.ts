@@ -31,7 +31,7 @@ app.use(cookieParser());
 app.use(
   session({
     store: new PgSession({
-      pool: pool as any,
+      pool: pool,
       tableName: "finn_sessions",
       createTableIfMissing: true,
     }),

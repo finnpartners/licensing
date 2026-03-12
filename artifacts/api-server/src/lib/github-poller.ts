@@ -39,11 +39,21 @@ export async function pollProduct(productId: number): Promise<{ success: boolean
       return { success: false, message: `GitHub API returned ${response.status}` };
     }
 
-    const body = await response.json() as any;
+    interface GitHubAsset {
+      name: string;
+      browser_download_url: string;
+    }
+    interface GitHubRelease {
+      tag_name: string;
+      published_at: string;
+      body: string;
+      assets: GitHubAsset[];
+    }
 
-    const assets: any[] = body.assets || [];
+    const body: GitHubRelease = await response.json() as GitHubRelease;
+
     let downloadUrl = "";
-    for (const asset of assets) {
+    for (const asset of body.assets || []) {
       if (asset.name && asset.name.toLowerCase().endsWith(".zip")) {
         downloadUrl = asset.browser_download_url || "";
         break;

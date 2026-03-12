@@ -1023,7 +1023,7 @@ components:
         version:
           type: string
           nullable: true
-        downloadUrl:
+        download_url:
           type: string
           nullable: true
         slug:
@@ -1035,7 +1035,7 @@ components:
         requires:
           type: string
           nullable: true
-        requiresPhp:
+        requires_php:
           type: string
           nullable: true
         sections:

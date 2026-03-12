@@ -146,11 +146,11 @@ router.get("/finn/v1/update-check", async (req, res) => {
 
     res.json({
       version: product.latestVersion,
-      downloadUrl,
+      download_url: downloadUrl,
       slug: product.slug,
       tested: product.testedWp,
       requires: product.requiresWp,
-      requiresPhp: product.requiresPhp,
+      requires_php: product.requiresPhp,
       sections: {
         changelog: product.changelog || "",
       },
