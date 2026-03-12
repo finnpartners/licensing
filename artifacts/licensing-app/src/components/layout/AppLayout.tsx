@@ -25,10 +25,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const SidebarContent = () => (
     <>
       <div className="p-6 flex items-center gap-3 border-b border-slate-800">
-        <div className="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center">
-           <img src={`${import.meta.env.BASE_URL}images/logo.png`} alt="Logo" className="w-5 h-5 brightness-0 invert" />
+        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 12L11 14L15 10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <rect x="3" y="3" width="18" height="18" rx="4" stroke="white" strokeWidth="2"/>
+          </svg>
         </div>
-        <span className="font-display font-bold text-xl text-white tracking-wide">FINN</span>
+        <div className="flex flex-col">
+          <span className="font-display font-bold text-lg text-white tracking-wide leading-tight">FINN</span>
+          <span className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold leading-tight">Licensing</span>
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
         <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 px-3">Management</div>
