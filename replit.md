@@ -84,7 +84,6 @@ artifacts-monorepo/
 - `finn_releases` — Release history per product (version, tagName, changelog, download URLs, publishedAt)
 - `finn_licenses` — License keys (UUID key, domain, client ref, plugin access, status)
 - `finn_settings` — Key-value settings store (encrypted values)
-- `finn_users` — Admin users (legacy table, kept for schema compatibility)
 - `finn_sessions` — Session store (connect-pg-simple)
 
 ## API Routes
