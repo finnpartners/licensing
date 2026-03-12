@@ -70,7 +70,7 @@ artifacts-monorepo/
 │           ├── pages/      # login, dashboard, clients, products, product-detail, settings
 │           ├── hooks/      # use-api-wrappers (mutation hooks with invalidation)
 │           └── components/ # layout/AppLayout, ui/* (shadcn)
-├── lib/
+├── shared/
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
 │   ├── api-zod/            # Generated Zod schemas from OpenAPI
@@ -144,16 +144,16 @@ Express 5 API server with Azure AD SSO, admin CRUD routes, and public licensing 
 ### `artifacts/licensing-app` (`@workspace/licensing-app`)
 React + Vite frontend with dark navy sidebar, admin pages for clients/products/licenses/settings. Login via Microsoft SSO.
 
-### `lib/db` (`@workspace/db`)
+### `shared/db` (`@workspace/db`)
 Drizzle ORM schema and PostgreSQL connection. Exports pool, db instance, and all table schemas.
 
-### `lib/api-spec` (`@workspace/api-spec`)
+### `shared/api-spec` (`@workspace/api-spec`)
 OpenAPI 3.1 spec and Orval codegen config.
 
-### `lib/api-zod` (`@workspace/api-zod`)
+### `shared/api-zod` (`@workspace/api-zod`)
 Generated Zod schemas from OpenAPI spec.
 
-### `lib/api-client-react` (`@workspace/api-client-react`)
+### `shared/api-client-react` (`@workspace/api-client-react`)
 Generated React Query hooks and fetch client.
 
 ### `scripts` (`@workspace/scripts`)
