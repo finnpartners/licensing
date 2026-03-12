@@ -155,31 +155,6 @@ Download the product ZIP. Same parameters as update-check. Proxies the download 
 
 List available products. Requires `Authorization: Bearer <api-key>` header using the API key from Settings.
 
-## WordPress Plugin Integration
-
-See `wp-client/class-finn-licensing-client.php` for a drop-in PHP class that connects your WordPress plugin to this server. It handles:
-
-- License validation on activation
-- Automatic update checks via WordPress transients
-- Licensed downloads through the server's proxy
-- Admin notices for license issues
-
-### Usage in your plugin
-
-```php
-require_once __DIR__ . '/includes/class-finn-licensing-client.php';
-
-new Finn_Licensing_Client( [
-    'server_url'    => 'https://your-licensing-server.com',
-    'product_id'    => '1',
-    'product_slug'  => 'my-plugin',
-    'product_name'  => 'My Plugin',
-    'version'       => '1.0.0',
-    'license_key'   => get_option( 'my_plugin_license_key', '' ),
-    'plugin_file'   => __FILE__,
-] );
-```
-
 ## Admin API
 
 All admin endpoints require an active Azure AD session and CSRF token (`x-csrf-token` header matching `finn.csrf` cookie).
