@@ -230,67 +230,72 @@ function ImportGitHubDialog({
   onImport: (repo: GitHubRepo) => void;
   importing: boolean;
 }) {
-  const [repos, setRepos] = useState<GitHubRepo[]>([]);
+  const [allRepos, setAllRepos] = useState<GitHubRepo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [hasFetched, setHasFetched] = useState(false);
 
-  const fetchRepos = useCallback(async (query: string) => {
+  const fetchRepos = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const url = query
-        ? `${BASE}/api/admin/github/repos?q=${encodeURIComponent(query)}`
-        : `${BASE}/api/admin/github/repos`;
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(`${BASE}/api/admin/github/repos`, { credentials: "include" });
       if (!res.ok) {
         const data = await res.json();
         setError(data.message || "Failed to fetch repositories");
-        setRepos([]);
+        setAllRepos([]);
         return;
       }
       const data = await res.json();
-      setRepos(data);
+      setAllRepos(data);
+      setHasFetched(true);
     } catch {
       setError("Failed to connect to server");
-      setRepos([]);
+      setAllRepos([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    if (open && !hasFetched) {
+      fetchRepos();
+    }
     if (open) {
-      fetchRepos("");
       setSearch("");
     }
-  }, [open, fetchRepos]);
+  }, [open, hasFetched, fetchRepos]);
 
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-    if (searchTimeout) clearTimeout(searchTimeout);
-    setSearchTimeout(setTimeout(() => fetchRepos(value), 400));
-  };
+  const filtered = search
+    ? allRepos.filter((r) => {
+        const q = search.toLowerCase();
+        return (
+          r.fullName.toLowerCase().includes(q) ||
+          r.name.toLowerCase().includes(q) ||
+          (r.description && r.description.toLowerCase().includes(q))
+        );
+      })
+    : allRepos;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg overflow-hidden">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Import from GitHub</DialogTitle>
         </DialogHeader>
-        <div className="mt-2">
+        <div className="mt-2 min-w-0">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
               placeholder="Search repositories..."
               value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
             />
           </div>
 
-          <div className="mt-3 max-h-80 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100">
+          <div className="mt-3 max-h-80 overflow-y-auto overflow-x-hidden border border-slate-200 rounded-xl divide-y divide-slate-100">
             {loading && (
               <div className="flex items-center justify-center py-8">
                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600" />
@@ -301,18 +306,18 @@ function ImportGitHubDialog({
               <div className="p-4 text-center text-sm text-rose-600">{error}</div>
             )}
 
-            {!loading && !error && repos.length === 0 && (
+            {!loading && !error && filtered.length === 0 && (
               <div className="p-6 text-center text-sm text-slate-500">
                 No repositories found.
               </div>
             )}
 
-            {!loading && !error && repos.map((repo) => (
+            {!loading && !error && filtered.map((repo) => (
               <div
                 key={repo.fullName}
-                className="flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
+                className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors"
               >
-                <div className="min-w-0 flex-1 mr-3">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <Github className="w-4 h-4 text-slate-500 shrink-0" />
                     <span className="font-mono text-sm font-medium text-slate-900 truncate">{repo.fullName}</span>
