@@ -84,7 +84,7 @@ export default function Settings() {
             </div>
             <div>
               <h3 className="text-lg font-bold text-slate-900">GitHub Personal Access Token</h3>
-              <p className="text-sm text-slate-500 mt-1">Required to poll private repositories for releases and proxy downloads. Token is stored encrypted.</p>
+              <p className="text-sm text-slate-500 mt-1">Required to sync private repositories for releases and proxy downloads. Token is stored encrypted.</p>
             </div>
           </div>
 

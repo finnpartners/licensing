@@ -88,8 +88,8 @@ export function useProductMutations() {
       mutation: { 
         onSuccess: (data, variables) => { 
           onPollSuccess(variables.id); 
-          if(data.success) toast({ title: "Polling complete", description: data.message, variant: "success" });
-          else toast({ title: "Polling failed", description: data.message, variant: "destructive" });
+          if(data.success) toast({ title: "Sync complete", description: data.message, variant: "success" });
+          else toast({ title: "Sync failed", description: data.message, variant: "destructive" });
         }, 
         onError 
       } 

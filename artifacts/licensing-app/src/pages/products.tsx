@@ -165,7 +165,7 @@ export default function Products() {
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">GitHub Repository *</label>
               <Input {...register("githubRepo")} placeholder="owner/repo" className={errors.githubRepo ? "border-rose-300 font-mono" : "font-mono"} />
-              <p className="text-xs text-slate-500 mt-1">Format: owner/repo. Used to poll for releases.</p>
+              <p className="text-xs text-slate-500 mt-1">Format: owner/repo. Used to sync releases.</p>
             </div>
 
             <div className="flex justify-end gap-3 pt-4">

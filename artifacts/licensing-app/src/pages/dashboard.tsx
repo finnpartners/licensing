@@ -77,7 +77,7 @@ export default function Dashboard() {
            </Card>
            <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-fuchsia-500" onClick={() => window.location.href='/products'}>
              <h3 className="font-bold text-lg mb-2">Update Products</h3>
-             <p className="text-slate-500 text-sm">Poll GitHub for the latest releases of registered plugins.</p>
+             <p className="text-slate-500 text-sm">Sync GitHub for the latest releases of registered plugins.</p>
            </Card>
            <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-blue-500" onClick={() => window.location.href='/clients'}>
              <h3 className="font-bold text-lg mb-2">Manage Clients</h3>

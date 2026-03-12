@@ -6,8 +6,22 @@ import { useProductMutations } from "@/hooks/use-api-wrappers";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Github, RefreshCw, Calendar, Tag, Download, ChevronDown, ChevronRight } from "lucide-react";
+import { ArrowLeft, Github, RefreshCw, Calendar, Tag, ExternalLink, ChevronDown, ChevronRight } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+
+function linkifyText(text: string) {
+  const urlRegex = /(https?:\/\/[^\s)<>]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-700 underline">
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  );
+}
 
 export default function ProductDetail() {
   const params = useParams<{ id: string }>();
@@ -104,7 +118,7 @@ export default function ProductDetail() {
               <TableHead>Version</TableHead>
               <TableHead>Tag</TableHead>
               <TableHead>Published</TableHead>
-              <TableHead>Download</TableHead>
+              <TableHead>Release</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -141,15 +155,15 @@ export default function ProductDetail() {
                       {formatDate(release.publishedAt)}
                     </TableCell>
                     <TableCell>
-                      {release.downloadUrl ? (
+                      {product.githubRepo && release.tagName ? (
                         <a
-                          href={release.downloadUrl}
+                          href={`https://github.com/${product.githubRepo}/releases/tag/${release.tagName}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <Download className="w-3.5 h-3.5" />
+                          <ExternalLink className="w-3.5 h-3.5" />
                           Download
                         </a>
                       ) : (
@@ -163,7 +177,7 @@ export default function ProductDetail() {
                         <div className="px-6 py-4 border-t border-slate-100">
                           <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Changelog</div>
                           <pre className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed max-h-64 overflow-auto">
-                            {release.changelog}
+                            {linkifyText(release.changelog)}
                           </pre>
                         </div>
                       </TableCell>
