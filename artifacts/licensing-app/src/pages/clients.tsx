@@ -16,7 +16,6 @@ import { formatDate } from "@/lib/utils";
 
 const clientSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  company: z.string().optional().nullable(),
   email: z.string().email("Invalid email").optional().nullable().or(z.literal('')),
   notes: z.string().optional().nullable(),
 });
@@ -60,15 +59,14 @@ export default function Clients() {
 
   const openCreateClient = () => {
     setEditingClientId(null);
-    clientForm.reset({ name: "", company: "", email: "", notes: "" });
+    clientForm.reset({ name: "", email: "", notes: "" });
     setClientDialogOpen(true);
   };
 
-  const openEditClient = (client: { id: number; name: string; company?: string | null; email?: string | null; notes?: string | null }) => {
+  const openEditClient = (client: { id: number; name: string; email?: string | null; notes?: string | null }) => {
     setEditingClientId(client.id);
     clientForm.reset({
       name: client.name,
-      company: client.company || "",
       email: client.email || "",
       notes: client.notes || "",
     });
@@ -157,7 +155,6 @@ export default function Clients() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Company</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Licenses</TableHead>
               <TableHead>Added</TableHead>
@@ -168,7 +165,6 @@ export default function Clients() {
             {clients?.map((client) => (
               <TableRow key={client.id}>
                 <TableCell className="font-semibold text-slate-900">{client.name}</TableCell>
-                <TableCell className="text-slate-600">{client.company || "-"}</TableCell>
                 <TableCell className="text-slate-600">{client.email || "-"}</TableCell>
                 <TableCell>
                   <span className="inline-flex items-center justify-center bg-slate-100 text-slate-700 font-bold px-2.5 py-0.5 rounded-full text-xs">
@@ -290,10 +286,6 @@ export default function Clients() {
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Name *</label>
               <Input {...clientForm.register("name")} placeholder="Jane Doe" className={clientForm.formState.errors.name ? "border-rose-300" : ""} />
               {clientForm.formState.errors.name && <p className="text-rose-500 text-xs mt-1">{clientForm.formState.errors.name.message}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Company</label>
-              <Input {...clientForm.register("company")} placeholder="Acme Corp" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email</label>
