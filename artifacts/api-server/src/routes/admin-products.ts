@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { productsTable, licensesTable } from "@workspace/db/schema";
-import { eq, sql, like } from "drizzle-orm";
+import { eq, ne, and, sql, like } from "drizzle-orm";
 import { CreateProductBody, UpdateProductBody, GetProductParams, UpdateProductParams, DeleteProductParams, PollProductParams } from "@workspace/api-zod";
 import { pollProduct } from "../lib/github-poller";
 
@@ -90,6 +90,13 @@ router.put("/admin/products/:id", async (req, res) => {
 
     if (!/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(parsed.data.githubRepo)) {
       res.status(400).json({ message: "GitHub repo must be in owner/repo format" });
+      return;
+    }
+
+    const [slugConflict] = await db.select({ id: productsTable.id }).from(productsTable)
+      .where(and(eq(productsTable.slug, parsed.data.slug), ne(productsTable.id, params.data.id)));
+    if (slugConflict) {
+      res.status(400).json({ message: "A product with this slug already exists" });
       return;
     }
 
