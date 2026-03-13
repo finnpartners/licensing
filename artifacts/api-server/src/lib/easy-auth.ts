@@ -20,7 +20,7 @@ interface ClientPrincipal {
 
 const ALLOWED_DOMAINS = (process.env.ALLOWED_AUTH_DOMAINS || "finnpartners.com")
   .split(",")
-  .map((d) => d.trim().toLowerCase());
+  .map((d) => d.trim().toLowerCase().replace(/^@/, ""));
 
 export function getEasyAuthUser(req: Request): EasyAuthUser | null {
   const principalHeader = req.headers["x-ms-client-principal"] as string | undefined;
