@@ -1,6 +1,6 @@
 import { useState, ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Users, Package, Settings, Menu, X } from "lucide-react";
+import { LayoutDashboard, Users, Shield, Package, Settings, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGetMe } from "@workspace/api-client-react";
 
@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/products", label: "Products", icon: Package },
   { href: "/clients", label: "Clients", icon: Users },
+  { href: "/users", label: "Users", icon: Shield },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
