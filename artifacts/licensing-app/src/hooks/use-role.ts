@@ -23,8 +23,14 @@ export interface UserRole {
 }
 
 export function useUserRoles() {
+  const isAdmin = useIsAdmin();
   return useQuery<UserRole[]>({
     queryKey: ["user-roles"],
-    queryFn: () => fetch(`${BASE}/api/admin/user-roles`, { credentials: "include" }).then(r => r.json()),
+    queryFn: async () => {
+      const res = await fetch(`${BASE}/api/admin/user-roles`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: isAdmin,
   });
 }
