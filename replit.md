@@ -38,12 +38,13 @@ Full-stack web application for managing WordPress plugin licenses. Built with Re
 - `GITHUB_PAT` — GitHub Personal Access Token for syncing private repos and proxying downloads
 - `FINN_API_KEY` — API key for WordPress plugin authentication via Bearer token (used by the public `/api/products` endpoint)
 - `CORS_ORIGIN` — Required in production. Comma-separated allowed origins
+- `ALLOWED_AUTH_DOMAINS` — Optional. Comma-separated email domains allowed admin access (defaults to `finnpartners.com`)
 - `APP_BASE_URL` — Optional. Base URL for post-login redirect
 - `APP_PATH` — Optional. Frontend app path prefix
 
 ## Authentication Flow
 
-Authentication is handled by Azure Easy Auth at the infrastructure level. The app reads user identity from Easy Auth headers (`X-MS-CLIENT-PRINCIPAL-ID`, `X-MS-CLIENT-PRINCIPAL-NAME`). In development, a dev-login bypass creates a local session.
+Azure Easy Auth is set to "Allow unauthenticated access" so public API endpoints are reachable by WordPress plugins. The app handles auth itself: admin routes check the `x-ms-client-principal` base64 token (preferred) or fallback to `x-ms-client-principal-id`/`x-ms-client-principal-name` headers, and restrict access to allowed email domains (default: `finnpartners.com`). The frontend redirects unauthenticated users to `/.auth/login/aad` in production. In development, a dev-login bypass creates a local session.
 
 ## Structure
 
