@@ -2,22 +2,22 @@
 /**
  * Plugin Name: FINN DEV Dashboard
  * Description: Central dashboard for managing and updating internal Finn Partners plugins via FINN Licensing API.
- * Version: 2.1.0
+ * Version: 2.0.2
  * Author: Finn Partners
  * Author URI: https://finnpartners.com/
  * Requires PHP: 8.0
  * License: GNU General Public License v3 or later
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
- * FINN ID: 1
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 class FP_Dev_Dashboard {
 
-    private $api_base_url    = 'https://licensing.finnpartners.com/api';
+    private $api_base_url    = 'https://wplicense.finnpartners.com/api';
     private $option_name     = 'finn_updater_settings';
     private $installing_slug = '';
+    private $product_slugs   = null;
 
     public function __construct() {
         add_action( 'admin_menu', [ $this, 'register_finn_dev_menu' ] );
@@ -30,11 +30,6 @@ class FP_Dev_Dashboard {
         add_filter( 'plugins_api', [ $this, 'plugin_popup_info' ], 10, 3 );
         add_filter( 'upgrader_source_selection', [ $this, 'fix_folder_name' ], 10, 4 );
 
-        add_filter( 'extra_plugin_headers', function( $headers ) {
-            $headers[] = 'FINN ID';
-            return $headers;
-        });
-
         add_action( 'finn_dev_daily_license_check', [ $this, 'verify_license_status' ] );
         if ( ! wp_next_scheduled( 'finn_dev_daily_license_check' ) ) {
             wp_schedule_event( time(), 'daily', 'finn_dev_daily_license_check' );
@@ -44,9 +39,13 @@ class FP_Dev_Dashboard {
         add_action( 'admin_notices', [ $this, 'show_license_notice' ] );
     }
 
-    private function get_product_id( array $plugin_data ): string {
-        if ( ! empty( $plugin_data['FINN ID'] ) ) return trim( $plugin_data['FINN ID'] );
-        return '';
+    private function get_plugin_slug( string $file ): string {
+        return dirname( $file );
+    }
+
+    private function is_finn_plugin( string $file ): bool {
+        $slug = $this->get_plugin_slug( $file );
+        return str_starts_with( $slug, 'fp-' );
     }
 
     private function get_fingerprint() {
@@ -56,8 +55,8 @@ class FP_Dev_Dashboard {
 
     private function get_settings() {
         return wp_parse_args( get_option( $this->option_name, [] ), [
-            'api_key'     => '',
-            'license_key' => ''
+                'api_key'     => '',
+                'license_key' => ''
         ]);
     }
 
@@ -105,19 +104,19 @@ class FP_Dev_Dashboard {
         $all_plugins = get_plugins();
         $installed_finn = [];
         $update_count = 0;
-        $installed_product_ids = [];
+        $installed_slugs = [];
 
         foreach($all_plugins as $file => $data) {
-            $product_id = $this->get_product_id( $data );
-            if (!empty($product_id)) {
-                $transient = get_site_transient('update_plugins');
-                $has_update = isset($transient->response[$file]);
-                $data['file'] = $file;
-                $data['has_update'] = $has_update;
-                $installed_finn[] = $data;
-                $installed_product_ids[] = $product_id;
-                if ($has_update) $update_count++;
-            }
+            if ( ! $this->is_finn_plugin( $file ) ) continue;
+
+            $slug = $this->get_plugin_slug( $file );
+            $transient = get_site_transient('update_plugins');
+            $has_update = isset($transient->response[$file]);
+            $data['file'] = $file;
+            $data['has_update'] = $has_update;
+            $installed_finn[] = $data;
+            $installed_slugs[] = $slug;
+            if ($has_update) $update_count++;
         }
 
         $settings = $this->get_settings();
@@ -125,11 +124,17 @@ class FP_Dev_Dashboard {
 
         if ( !empty($settings['api_key']) ) {
             $response = wp_remote_get("{$this->api_base_url}/products", [
-                'headers' => [ 'Authorization' => 'Bearer ' . $settings['api_key'], 'Accept' => 'application/json' ]
+                    'headers' => [ 'Authorization' => 'Bearer ' . $settings['api_key'], 'Accept' => 'application/json' ]
             ]);
             if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
                 $body = json_decode(wp_remote_retrieve_body($response));
                 $available_products = $body->data ?? [];
+            }
+        }
+        $description_map = [];
+        foreach ($available_products as $product) {
+            if (!empty($product->description)) {
+                $description_map[$product->slug] = $product->description;
             }
         }
         ?>
@@ -152,13 +157,20 @@ class FP_Dev_Dashboard {
                     <div class="fd-panel-header"><h2><span class="dashicons dashicons-admin-plugins"></span> Plugins</h2></div>
                     <div class="fd-panel-content">
                         <?php foreach($installed_finn as $plugin): ?>
+                            <?php $slug = $this->get_plugin_slug($plugin['file']); ?>
                             <div class="fd-plugin-row">
                                 <div style="flex-grow:1;">
                                     <strong style="font-size:14px; color:#333;"><?php echo esc_html($plugin['Name']); ?></strong>
                                     <span style="font-size:11px; color:#999; margin-left:8px;">v<?php echo esc_html($plugin['Version']); ?></span>
                                     <?php if ($plugin['has_update']): ?><span class="fd-update-badge">update available</span><?php endif; ?>
+                                    <?php if (!empty($description_map[$slug])): ?>
+                                        <div style="font-size:12px; color:#888; margin-top:4px; line-height:1.4;"><?php echo esc_html($description_map[$slug]); ?></div>
+                                    <?php endif; ?>
                                 </div>
-                                <div>
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <a href="<?php echo esc_url('https://github.com/finnpartners/' . $slug); ?>" target="_blank" rel="noopener noreferrer" title="View on GitHub" style="color:#999; text-decoration:none; display:flex; align-items:center;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                                    </a>
                                     <?php if ($plugin['has_update']): ?>
                                         <a href="<?php echo admin_url('update-core.php'); ?>" class="dashicons dashicons-download" style="color:#00a0d2; text-decoration:none; font-size:20px;"></a>
                                     <?php else: ?>
@@ -169,12 +181,20 @@ class FP_Dev_Dashboard {
                         <?php endforeach; ?>
 
                         <?php foreach($available_products as $product):
-                            if (in_array($product->id, $installed_product_ids)) continue; ?>
+                            if (in_array($product->slug, $installed_slugs)) continue; ?>
                             <div class="fd-plugin-row">
                                 <div style="flex-grow:1;">
                                     <strong style="font-size:14px; color:#333;"><?php echo esc_html($product->name); ?></strong>
+                                    <?php if (!empty($product->description)): ?>
+                                        <div style="font-size:12px; color:#888; margin-top:4px; line-height:1.4;"><?php echo esc_html($product->description); ?></div>
+                                    <?php endif; ?>
                                 </div>
-                                <div><a href="<?php echo esc_url(admin_url('admin-post.php?action=finn_install_plugin&product_id=' . $product->id . '&nonce=' . wp_create_nonce('finn_install'))); ?>" class="fd-btn">Install</a></div>
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <a href="<?php echo esc_url('https://github.com/finnpartners/' . $product->slug); ?>" target="_blank" rel="noopener noreferrer" title="View on GitHub" style="color:#999; text-decoration:none; display:flex; align-items:center;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                                    </a>
+                                    <a href="<?php echo esc_url(admin_url('admin-post.php?action=finn_install_plugin&slug=' . urlencode($product->slug) . '&nonce=' . wp_create_nonce('finn_install'))); ?>" class="fd-btn">Install</a>
+                                </div>
                             </div>
                         <?php endforeach; ?>
 
@@ -198,11 +218,11 @@ class FP_Dev_Dashboard {
         }
 
         $response = wp_remote_post( "{$this->api_base_url}/validate", [
-            'headers' => [ 'Accept' => 'application/json', 'Content-Type' => 'application/json' ],
-            'body'    => wp_json_encode([
-                'key'         => $settings['license_key'],
-                'fingerprint' => $this->get_fingerprint()
-            ])
+                'headers' => [ 'Accept' => 'application/json', 'Content-Type' => 'application/json' ],
+                'body'    => wp_json_encode([
+                        'key'         => $settings['license_key'],
+                        'fingerprint' => $this->get_fingerprint()
+                ])
         ]);
 
         if ( is_wp_error( $response ) ) return;
@@ -233,13 +253,15 @@ class FP_Dev_Dashboard {
         $settings = $this->get_settings();
 
         foreach ( $plugins as $file => $data ) {
-            $product_id = $this->get_product_id( $data );
-            if ( empty( $product_id ) ) continue;
+            if ( ! $this->is_finn_plugin( $file ) ) continue;
+
+            $slug = $this->get_plugin_slug( $file );
 
             $url = add_query_arg([
-                'product_id'  => $product_id,
-                'license'     => $settings['license_key'] ?? '',
-                'fingerprint' => $this->get_fingerprint()
+                    'slug'        => $slug,
+                    'license'     => $settings['license_key'] ?? '',
+                    'fingerprint' => $this->get_fingerprint(),
+                    'version'     => $data['Version']
             ], "{$this->api_base_url}/update-check");
 
             $response = wp_remote_get( $url, [ 'timeout' => 15 ] );
@@ -249,7 +271,7 @@ class FP_Dev_Dashboard {
 
             if ( isset( $update_data->version ) && version_compare( $update_data->version, $data['Version'], '>' ) ) {
                 $obj = new stdClass();
-                $obj->slug = dirname( $file );
+                $obj->slug = $slug;
                 $obj->plugin = $file;
                 $obj->new_version = $update_data->version;
                 $obj->package = $update_data->download_url ?? '';
@@ -267,19 +289,20 @@ class FP_Dev_Dashboard {
     public function plugin_popup_info( $result, $action, $args ) {
         if ( $action !== 'plugin_information' ) return $result;
 
-        $plugins = get_plugins();
-        $file = $args->slug . '/' . $args->slug . '.php';
-        if ( ! isset( $plugins[ $file ] ) ) return $result;
+        $slug = $args->slug;
+        if ( ! str_starts_with( $slug, 'fp-' ) ) return $result;
 
-        $product_id = $this->get_product_id( $plugins[ $file ] );
-        if ( empty( $product_id ) ) return $result;
+        $plugins = get_plugins();
+        $file = $slug . '/' . $slug . '.php';
+        if ( ! isset( $plugins[ $file ] ) ) return $result;
 
         $settings = $this->get_settings();
 
         $url = add_query_arg([
-            'product_id'  => $product_id,
-            'license'     => $settings['license_key'] ?? '',
-            'fingerprint' => $this->get_fingerprint()
+                'slug'        => $slug,
+                'license'     => $settings['license_key'] ?? '',
+                'fingerprint' => $this->get_fingerprint(),
+                'version'     => $plugins[ $file ]['Version']
         ], "{$this->api_base_url}/update-check");
 
         $response = wp_remote_get( $url, [ 'timeout' => 15 ] );
@@ -289,7 +312,7 @@ class FP_Dev_Dashboard {
 
         $res = new stdClass();
         $res->name          = $plugins[ $file ]['Name'];
-        $res->slug          = $args->slug;
+        $res->slug          = $slug;
         $res->version       = $update_data->version ?? 'Unknown';
         $res->tested        = $update_data->tested ?? '';
         $res->requires      = $update_data->requires ?? '';
@@ -297,8 +320,8 @@ class FP_Dev_Dashboard {
         $res->download_link = $update_data->download_url ?? '';
         $res->trunk         = $update_data->download_url ?? '';
         $res->sections      = [
-            'description' => $plugins[ $file ]['Description'] ?? 'Managed via FINN Licensing.',
-            'changelog'   => wp_kses_post( $update_data->sections->changelog ?? 'No changelog provided.' ),
+                'description' => $plugins[ $file ]['Description'] ?? 'Managed via FINN Licensing.',
+                'changelog'   => wp_kses_post( $update_data->sections->changelog ?? 'No changelog provided.' ),
         ];
         return $res;
     }
@@ -307,13 +330,15 @@ class FP_Dev_Dashboard {
         if (!current_user_can('install_plugins')) wp_die('Unauthorized');
         check_admin_referer('finn_install', 'nonce');
 
-        $product_id = sanitize_text_field($_GET['product_id']);
+        $slug = sanitize_text_field($_GET['slug'] ?? '');
+        if ( empty( $slug ) ) wp_die('Missing plugin slug.');
+
         $settings = $this->get_settings();
 
         $url = add_query_arg([
-            'product_id'  => $product_id,
-            'license'     => $settings['license_key'] ?? '',
-            'fingerprint' => $this->get_fingerprint()
+                'slug'        => $slug,
+                'license'     => $settings['license_key'] ?? '',
+                'fingerprint' => $this->get_fingerprint()
         ], "{$this->api_base_url}/update-check");
 
         $response = wp_remote_get( $url, [ 'timeout' => 15 ] );
@@ -405,4 +430,4 @@ class FP_Dev_Dashboard {
     }
 }
 
-$fp_dev_dashboard = new FP_Dev_Dashboard();
+new FP_Dev_Dashboard();
