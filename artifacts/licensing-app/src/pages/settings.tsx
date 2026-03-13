@@ -2,9 +2,91 @@ import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, Eye, EyeOff } from "lucide-react";
+import { Copy, Check, Eye, EyeOff, Github, CircleCheck, CircleX, RefreshCw } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+interface GitHubStatus {
+  connected: boolean;
+  login?: string;
+  name?: string;
+  rateLimit?: number | null;
+  rateRemaining?: number | null;
+  message?: string;
+}
+
+function GitHubStatusCard() {
+  const [status, setStatus] = useState<GitHubStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const checkStatus = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/admin/github-status`, { credentials: "include" });
+      const data = await res.json();
+      setStatus(data);
+    } catch {
+      setStatus({ connected: false, message: "Failed to check status" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    checkStatus();
+  }, []);
+
+  return (
+    <Card className="p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <Github className="w-5 h-5 text-slate-700" />
+            <h3 className="font-bold text-lg text-slate-900">GitHub Connection</h3>
+          </div>
+          <p className="text-sm text-slate-500 mt-1">
+            Used to sync plugin releases and proxy downloads.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={checkStatus} disabled={loading} className="h-8 px-3">
+          <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+          Recheck
+        </Button>
+      </div>
+
+      {loading && !status ? (
+        <div className="h-12 bg-slate-100 rounded-lg animate-pulse" />
+      ) : status?.connected ? (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
+          <div className="flex items-center gap-2 mb-2">
+            <CircleCheck className="w-4.5 h-4.5 text-emerald-600" />
+            <span className="text-sm font-semibold text-emerald-800">Connected</span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+            <div className="text-slate-600">Account</div>
+            <div className="font-medium text-slate-900">{status.name || status.login} <span className="text-slate-400 font-normal">(@{status.login})</span></div>
+            {status.rateLimit != null && status.rateRemaining != null && (
+              <>
+                <div className="text-slate-600">API Rate Limit</div>
+                <div className="font-medium text-slate-900">
+                  {status.rateRemaining.toLocaleString()} / {status.rateLimit.toLocaleString()} remaining
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+          <div className="flex items-center gap-2">
+            <CircleX className="w-4.5 h-4.5 text-red-600" />
+            <span className="text-sm font-semibold text-red-800">Disconnected</span>
+          </div>
+          <p className="text-sm text-red-700 mt-1">{status?.message}</p>
+        </div>
+      )}
+    </Card>
+  );
+}
 
 export default function Settings() {
   const [apiKey, setApiKey] = useState<string | null>(null);
@@ -25,7 +107,7 @@ export default function Settings() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const maskedKey = apiKey ? apiKey.substring(0, 4) + "•".repeat(Math.max(0, apiKey.length - 8)) + apiKey.substring(apiKey.length - 4) : "";
+  const maskedKey = apiKey ? apiKey.substring(0, 4) + "\u2022".repeat(Math.max(0, apiKey.length - 8)) + apiKey.substring(apiKey.length - 4) : "";
 
   return (
     <div>
@@ -63,6 +145,8 @@ export default function Settings() {
             </p>
           )}
         </Card>
+
+        <GitHubStatusCard />
       </div>
     </div>
   );

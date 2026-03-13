@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { clientsTable, productsTable, licensesTable } from "@workspace/db/schema";
 import { sql, eq } from "drizzle-orm";
+import { getGithubHeaders } from "../lib/github-poller";
 
 const router: IRouter = Router();
 
@@ -27,6 +28,41 @@ router.get("/admin/dashboard", async (_req, res) => {
 router.get("/admin/api-key", async (_req, res) => {
   const apiKey = process.env.FINN_API_KEY || "";
   res.json({ apiKey });
+});
+
+router.get("/admin/github-status", async (_req, res) => {
+  const headers = getGithubHeaders();
+  if (!headers["Authorization"]) {
+    res.json({ connected: false, message: "No GitHub token configured" });
+    return;
+  }
+
+  try {
+    const response = await fetch("https://api.github.com/user", {
+      headers,
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (response.ok) {
+      const user = await response.json() as { login: string; name: string | null };
+      const rateRemaining = response.headers.get("x-ratelimit-remaining");
+      const rateLimit = response.headers.get("x-ratelimit-limit");
+      res.json({
+        connected: true,
+        login: user.login,
+        name: user.name,
+        rateLimit: rateLimit ? parseInt(rateLimit, 10) : null,
+        rateRemaining: rateRemaining ? parseInt(rateRemaining, 10) : null,
+      });
+    } else if (response.status === 401) {
+      res.json({ connected: false, message: "Token is invalid or expired" });
+    } else {
+      res.json({ connected: false, message: `GitHub returned status ${response.status}` });
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.json({ connected: false, message });
+  }
 });
 
 export default router;
