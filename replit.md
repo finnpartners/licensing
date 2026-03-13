@@ -58,7 +58,7 @@ artifacts-monorepo/
 │   │       └── lib/        # domain, rate-limit, github-poller, easy-auth
 │   └── licensing-app/      # React frontend (Vite)
 │       └── src/
-│           ├── pages/      # login, dashboard, clients, products, product-detail
+│           ├── pages/      # login, dashboard, clients, products, product-detail, settings
 │           ├── hooks/      # use-api-wrappers (mutation hooks with invalidation)
 │           └── components/ # layout/AppLayout, ui/* (shadcn)
 ├── shared/
@@ -93,6 +93,7 @@ artifacts-monorepo/
 
 ### Admin (require auth + CSRF)
 - `GET /api/admin/dashboard` — Stats
+- `GET /api/admin/api-key` — Returns the configured FINN API Key
 - CRUD: `/api/admin/clients`, `/api/admin/products`, `/api/admin/licenses`
 - `GET /api/admin/products/:id/releases` — List all releases for a product
 - `POST /api/admin/products/:id/poll` — Poll GitHub for all releases and sync
