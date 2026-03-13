@@ -145,6 +145,20 @@ export function startDailyPoller(): void {
   console.log("[Poller] Daily release poller started (every 24h)");
 }
 
+async function fetchRepoDescription(repo: string, headers: Record<string, string>): Promise<string | null> {
+  try {
+    const response = await fetch(`https://api.github.com/repos/${repo}`, {
+      headers,
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) return null;
+    const data = await response.json() as { description?: string | null };
+    return data.description || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function pollProduct(productId: number): Promise<{ success: boolean; message: string }> {
   const [product] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
   if (!product) {
@@ -155,10 +169,15 @@ export async function pollProduct(productId: number): Promise<{ success: boolean
   const repo = product.githubRepo;
 
   try {
-    const releases = await fetchAllReleases(repo, headers);
+    const [releases, repoDescription] = await Promise.all([
+      fetchAllReleases(repo, headers),
+      fetchRepoDescription(repo, headers),
+    ]);
 
     if (!releases || releases.length === 0) {
-      await db.update(productsTable).set({ lastChecked: new Date() }).where(eq(productsTable.id, productId));
+      const descUpdate: Record<string, unknown> = { lastChecked: new Date() };
+      if (repoDescription !== null) descUpdate.description = repoDescription;
+      await db.update(productsTable).set(descUpdate).where(eq(productsTable.id, productId));
       return { success: false, message: "No releases found in repository" };
     }
 
@@ -173,13 +192,16 @@ export async function pollProduct(productId: number): Promise<{ success: boolean
     const releaseDate = latest.published_at ? new Date(latest.published_at) : null;
     const changelog = latest.body || "";
 
-    await db.update(productsTable).set({
+    const updateData: Record<string, unknown> = {
       latestVersion: version,
       releaseDate,
       changelog,
       downloadUrl,
       lastChecked: new Date(),
-    }).where(eq(productsTable.id, productId));
+    };
+    if (repoDescription !== null) updateData.description = repoDescription;
+
+    await db.update(productsTable).set(updateData).where(eq(productsTable.id, productId));
 
     return { success: true, message: `Updated to version ${version} (${releases.length} releases synced)` };
   } catch (err: unknown) {
