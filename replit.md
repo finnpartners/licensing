@@ -14,7 +14,7 @@ Full-stack web application for managing WordPress plugin licenses. Built with Re
 - **API framework**: Express 5
 - **Database**: PostgreSQL + Drizzle ORM
 - **Auth**: Azure Easy Auth (authentication handled at infrastructure level via headers)
-- **Security**: Helmet, CSRF double-submit with timing-safe comparison, configurable CORS
+- **Security**: Helmet, configurable CORS, Azure Easy Auth (infrastructure-level SSO)
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)

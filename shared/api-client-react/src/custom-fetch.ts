@@ -271,12 +271,6 @@ async function parseSuccessBody(
   }
 }
 
-function getCsrfCookie(): string | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(/(?:^|;\s*)finn\.csrf=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
 export async function customFetch<T = unknown>(
   input: RequestInfo | URL,
   options: CustomFetchOptions = {},
@@ -301,13 +295,6 @@ export async function customFetch<T = unknown>(
 
   if (responseType === "json" && !headers.has("accept")) {
     headers.set("accept", DEFAULT_JSON_ACCEPT);
-  }
-
-  if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
-    const csrfToken = getCsrfCookie();
-    if (csrfToken) {
-      headers.set("x-csrf-token", csrfToken);
-    }
   }
 
   const requestInfo = { method, url: resolveUrl(input) };
