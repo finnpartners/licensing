@@ -3,19 +3,21 @@ import { Link, useLocation } from "wouter";
 import { LayoutDashboard, Users, Shield, Package, Settings, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGetMe } from "@workspace/api-client-react";
+import { useIsAdmin } from "@/hooks/use-role";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/products", label: "Products", icon: Package },
   { href: "/clients", label: "Clients", icon: Users },
-  { href: "/users", label: "Users", icon: Shield },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/users", label: "Users", icon: Shield, adminOnly: true },
+  { href: "/settings", label: "Settings", icon: Settings, adminOnly: true },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { data: user } = useGetMe();
+  const isAdmin = useIsAdmin();
 
   const SidebarContent = () => (
     <>
@@ -33,7 +35,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </div>
       <div className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
         <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 px-3">Management</div>
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin).map((item) => {
           const isActive = location === item.href;
           const Icon = item.icon;
           return (
