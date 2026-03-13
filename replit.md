@@ -23,7 +23,7 @@ Full-stack web application for managing WordPress plugin licenses. Built with Re
 
 - Admin dashboard with stats overview
 - Client management (CRUD)
-- Product management (CRUD + GitHub release polling)
+- Product management (CRUD + GitHub release polling, manual "Check All" + automatic daily polling)
 - License management (CRUD + toggle active/revoked, auto-generated UUID keys, copy key anytime)
 - Domain plugin version tracking (records current plugin versions when sites check for updates)
 - Public API at `/api/*` for license validation, update checks, and download proxy
@@ -96,6 +96,7 @@ artifacts-monorepo/
 - CRUD: `/api/admin/clients`, `/api/admin/products`, `/api/admin/licenses`
 - `GET /api/admin/products/:id/releases` — List all releases for a product
 - `POST /api/admin/products/:id/poll` — Poll GitHub for all releases and sync
+- `POST /api/admin/products/poll-all` — Poll all products for new GitHub releases
 - `POST /api/admin/licenses/:id/toggle` — Toggle license active/revoked
 
 ### Public
