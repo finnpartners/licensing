@@ -101,11 +101,12 @@ router.get("/update-check", async (req, res) => {
   const noUpdate = { version: null };
 
   try {
-    const productId = req.query.product_id as string;
+    const productId = req.query.product_id as string | undefined;
+    const productSlug = req.query.slug as string | undefined;
     const licenseKey = req.query.license as string;
     const fingerprint = req.query.fingerprint as string;
 
-    if (!productId || !licenseKey || !fingerprint) {
+    if ((!productId && !productSlug) || !licenseKey || !fingerprint) {
       res.json(noUpdate);
       return;
     }
@@ -123,22 +124,27 @@ router.get("/update-check", async (req, res) => {
       return;
     }
 
+    let product;
+    if (productId) {
+      [product] = await db.select().from(productsTable).where(eq(productsTable.id, parseInt(productId, 10)));
+    } else if (productSlug) {
+      [product] = await db.select().from(productsTable).where(eq(productsTable.slug, productSlug));
+    }
+    if (!product || !product.downloadUrl) {
+      res.json(noUpdate);
+      return;
+    }
+
     if (license.pluginAccess !== "all") {
       if (!license.productIds) {
         res.json(noUpdate);
         return;
       }
       const ids = license.productIds.split(",").map((s) => s.trim());
-      if (!ids.includes(productId)) {
+      if (!ids.includes(String(product.id))) {
         res.json(noUpdate);
         return;
       }
-    }
-
-    const [product] = await db.select().from(productsTable).where(eq(productsTable.id, parseInt(productId, 10)));
-    if (!product || !product.downloadUrl) {
-      res.json(noUpdate);
-      return;
     }
 
     const currentVersion = req.query.version as string | undefined;
@@ -167,7 +173,7 @@ router.get("/update-check", async (req, res) => {
     }
 
     const baseUrl = `${req.protocol}://${req.get("host")}`;
-    const downloadUrl = `${baseUrl}/api/download?product_id=${productId}&license=${licenseKey}&fingerprint=${fingerprint}`;
+    const downloadUrl = `${baseUrl}/api/download?product_id=${product.id}&license=${licenseKey}&fingerprint=${fingerprint}`;
 
     res.json({
       version: product.latestVersion,
@@ -188,11 +194,12 @@ router.get("/update-check", async (req, res) => {
 
 router.get("/download", async (req, res) => {
   try {
-    const productId = req.query.product_id as string;
+    const productId = req.query.product_id as string | undefined;
+    const productSlug = req.query.slug as string | undefined;
     const licenseKey = req.query.license as string;
     const fingerprint = req.query.fingerprint as string;
 
-    if (!productId || !licenseKey || !fingerprint) {
+    if ((!productId && !productSlug) || !licenseKey || !fingerprint) {
       res.status(403).json({ message: "Forbidden" });
       return;
     }
@@ -210,22 +217,27 @@ router.get("/download", async (req, res) => {
       return;
     }
 
+    let product;
+    if (productId) {
+      [product] = await db.select().from(productsTable).where(eq(productsTable.id, parseInt(productId, 10)));
+    } else if (productSlug) {
+      [product] = await db.select().from(productsTable).where(eq(productsTable.slug, productSlug));
+    }
+    if (!product || !product.downloadUrl) {
+      res.status(404).json({ message: "Not Found" });
+      return;
+    }
+
     if (license.pluginAccess !== "all") {
       if (!license.productIds) {
         res.status(403).json({ message: "Forbidden" });
         return;
       }
       const ids = license.productIds.split(",").map((s) => s.trim());
-      if (!ids.includes(productId)) {
+      if (!ids.includes(String(product.id))) {
         res.status(403).json({ message: "Forbidden" });
         return;
       }
-    }
-
-    const [product] = await db.select().from(productsTable).where(eq(productsTable.id, parseInt(productId, 10)));
-    if (!product || !product.downloadUrl) {
-      res.status(404).json({ message: "Not Found" });
-      return;
     }
 
     const githubToken = process.env.GITHUB_PAT || "";

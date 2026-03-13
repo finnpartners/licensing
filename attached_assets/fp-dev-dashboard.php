@@ -2,13 +2,12 @@
 /**
  * Plugin Name: FINN DEV Dashboard
  * Description: Central dashboard for managing and updating internal Finn Partners plugins via FINN Licensing API.
- * Version: 2.2.0
+ * Version: 3.0.0
  * Author: Finn Partners
  * Author URI: https://finnpartners.com/
  * Requires PHP: 8.0
  * License: GNU General Public License v3 or later
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
- * FINN ID: 1
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -18,6 +17,7 @@ class FP_Dev_Dashboard {
     private $api_base_url    = 'https://wplicense.finnpartners.com/api';
     private $option_name     = 'finn_updater_settings';
     private $installing_slug = '';
+    private $product_slugs   = null;
 
     public function __construct() {
         add_action( 'admin_menu', [ $this, 'register_finn_dev_menu' ] );
@@ -30,11 +30,6 @@ class FP_Dev_Dashboard {
         add_filter( 'plugins_api', [ $this, 'plugin_popup_info' ], 10, 3 );
         add_filter( 'upgrader_source_selection', [ $this, 'fix_folder_name' ], 10, 4 );
 
-        add_filter( 'extra_plugin_headers', function( $headers ) {
-            $headers[] = 'FINN ID';
-            return $headers;
-        });
-
         add_action( 'finn_dev_daily_license_check', [ $this, 'verify_license_status' ] );
         if ( ! wp_next_scheduled( 'finn_dev_daily_license_check' ) ) {
             wp_schedule_event( time(), 'daily', 'finn_dev_daily_license_check' );
@@ -44,9 +39,13 @@ class FP_Dev_Dashboard {
         add_action( 'admin_notices', [ $this, 'show_license_notice' ] );
     }
 
-    private function get_product_id( array $plugin_data ): string {
-        if ( ! empty( $plugin_data['FINN ID'] ) ) return trim( $plugin_data['FINN ID'] );
-        return '';
+    private function get_plugin_slug( string $file ): string {
+        return dirname( $file );
+    }
+
+    private function is_finn_plugin( string $file ): bool {
+        $slug = $this->get_plugin_slug( $file );
+        return str_starts_with( $slug, 'fp-' );
     }
 
     private function get_fingerprint() {
@@ -105,19 +104,19 @@ class FP_Dev_Dashboard {
         $all_plugins = get_plugins();
         $installed_finn = [];
         $update_count = 0;
-        $installed_product_ids = [];
+        $installed_slugs = [];
 
         foreach($all_plugins as $file => $data) {
-            $product_id = $this->get_product_id( $data );
-            if (!empty($product_id)) {
-                $transient = get_site_transient('update_plugins');
-                $has_update = isset($transient->response[$file]);
-                $data['file'] = $file;
-                $data['has_update'] = $has_update;
-                $installed_finn[] = $data;
-                $installed_product_ids[] = $product_id;
-                if ($has_update) $update_count++;
-            }
+            if ( ! $this->is_finn_plugin( $file ) ) continue;
+
+            $slug = $this->get_plugin_slug( $file );
+            $transient = get_site_transient('update_plugins');
+            $has_update = isset($transient->response[$file]);
+            $data['file'] = $file;
+            $data['has_update'] = $has_update;
+            $installed_finn[] = $data;
+            $installed_slugs[] = $slug;
+            if ($has_update) $update_count++;
         }
 
         $settings = $this->get_settings();
@@ -169,12 +168,12 @@ class FP_Dev_Dashboard {
                         <?php endforeach; ?>
 
                         <?php foreach($available_products as $product):
-                            if (in_array($product->id, $installed_product_ids)) continue; ?>
+                            if (in_array($product->slug, $installed_slugs)) continue; ?>
                             <div class="fd-plugin-row">
                                 <div style="flex-grow:1;">
                                     <strong style="font-size:14px; color:#333;"><?php echo esc_html($product->name); ?></strong>
                                 </div>
-                                <div><a href="<?php echo esc_url(admin_url('admin-post.php?action=finn_install_plugin&product_id=' . $product->id . '&nonce=' . wp_create_nonce('finn_install'))); ?>" class="fd-btn">Install</a></div>
+                                <div><a href="<?php echo esc_url(admin_url('admin-post.php?action=finn_install_plugin&slug=' . urlencode($product->slug) . '&nonce=' . wp_create_nonce('finn_install'))); ?>" class="fd-btn">Install</a></div>
                             </div>
                         <?php endforeach; ?>
 
@@ -233,11 +232,12 @@ class FP_Dev_Dashboard {
         $settings = $this->get_settings();
 
         foreach ( $plugins as $file => $data ) {
-            $product_id = $this->get_product_id( $data );
-            if ( empty( $product_id ) ) continue;
+            if ( ! $this->is_finn_plugin( $file ) ) continue;
+
+            $slug = $this->get_plugin_slug( $file );
 
             $url = add_query_arg([
-                'product_id'  => $product_id,
+                'slug'        => $slug,
                 'license'     => $settings['license_key'] ?? '',
                 'fingerprint' => $this->get_fingerprint(),
                 'version'     => $data['Version']
@@ -250,7 +250,7 @@ class FP_Dev_Dashboard {
 
             if ( isset( $update_data->version ) && version_compare( $update_data->version, $data['Version'], '>' ) ) {
                 $obj = new stdClass();
-                $obj->slug = dirname( $file );
+                $obj->slug = $slug;
                 $obj->plugin = $file;
                 $obj->new_version = $update_data->version;
                 $obj->package = $update_data->download_url ?? '';
@@ -268,17 +268,17 @@ class FP_Dev_Dashboard {
     public function plugin_popup_info( $result, $action, $args ) {
         if ( $action !== 'plugin_information' ) return $result;
 
-        $plugins = get_plugins();
-        $file = $args->slug . '/' . $args->slug . '.php';
-        if ( ! isset( $plugins[ $file ] ) ) return $result;
+        $slug = $args->slug;
+        if ( ! str_starts_with( $slug, 'fp-' ) ) return $result;
 
-        $product_id = $this->get_product_id( $plugins[ $file ] );
-        if ( empty( $product_id ) ) return $result;
+        $plugins = get_plugins();
+        $file = $slug . '/' . $slug . '.php';
+        if ( ! isset( $plugins[ $file ] ) ) return $result;
 
         $settings = $this->get_settings();
 
         $url = add_query_arg([
-            'product_id'  => $product_id,
+            'slug'        => $slug,
             'license'     => $settings['license_key'] ?? '',
             'fingerprint' => $this->get_fingerprint(),
             'version'     => $plugins[ $file ]['Version']
@@ -291,7 +291,7 @@ class FP_Dev_Dashboard {
 
         $res = new stdClass();
         $res->name          = $plugins[ $file ]['Name'];
-        $res->slug          = $args->slug;
+        $res->slug          = $slug;
         $res->version       = $update_data->version ?? 'Unknown';
         $res->tested        = $update_data->tested ?? '';
         $res->requires      = $update_data->requires ?? '';
@@ -309,11 +309,13 @@ class FP_Dev_Dashboard {
         if (!current_user_can('install_plugins')) wp_die('Unauthorized');
         check_admin_referer('finn_install', 'nonce');
 
-        $product_id = sanitize_text_field($_GET['product_id']);
+        $slug = sanitize_text_field($_GET['slug'] ?? '');
+        if ( empty( $slug ) ) wp_die('Missing plugin slug.');
+
         $settings = $this->get_settings();
 
         $url = add_query_arg([
-            'product_id'  => $product_id,
+            'slug'        => $slug,
             'license'     => $settings['license_key'] ?? '',
             'fingerprint' => $this->get_fingerprint()
         ], "{$this->api_base_url}/update-check");
