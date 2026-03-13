@@ -1,4 +1,5 @@
 import { runMigrations } from "./lib/migrate";
+import { seedDefaultAdmins } from "./lib/seed-admins";
 import app from "./app";
 import { warmRepoCache } from "./routes/admin-products";
 import { startDailyPoller } from "./lib/github-poller";
@@ -19,6 +20,7 @@ if (Number.isNaN(port) || port <= 0) {
 
 async function start() {
   await runMigrations();
+  await seedDefaultAdmins();
 
   app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
