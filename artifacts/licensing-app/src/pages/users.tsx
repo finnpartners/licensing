@@ -69,86 +69,84 @@ export default function UsersPage() {
         description="Manage who can make changes"
       />
 
-      <div className="max-w-2xl">
-        <Card className="p-6">
-          <p className="text-sm text-slate-500 mb-6">
-            Users with the <Badge variant="default" className="mx-1">admin</Badge> role can add, edit, and delete products, clients, and licenses. Everyone else can view but not modify data.
-          </p>
+      <p className="text-sm text-slate-500 mb-6">
+        Users with the <Badge variant="default" className="mx-1">admin</Badge> role can add, edit, and delete products, clients, and licenses. Everyone else can view but not modify data.
+      </p>
 
-          {isLoading ? (
-            <div className="h-24 bg-slate-100 rounded-lg animate-pulse" />
-          ) : roles?.length === 0 ? (
-            <div className="text-center py-8 bg-slate-50 rounded-lg border border-slate-200 mb-4">
-              <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-sm text-slate-500">No admin users configured yet.</p>
-              <p className="text-xs text-slate-400 mt-1">Add your email below to get started.</p>
-            </div>
-          ) : (
-            <Table className="mb-4">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  {isAdmin && <TableHead className="w-16"></TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {roles?.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.email}</TableCell>
-                    <TableCell>
-                      <Badge variant={r.role === "admin" ? "default" : "secondary"}>
-                        {r.role}
-                      </Badge>
-                    </TableCell>
-                    {isAdmin && (
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(r.id)}>
-                          <Trash2 className="w-4 h-4 text-rose-500" />
-                        </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-
-          {isAdmin && (
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="user@finnpartners.com"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-                className="flex-1"
-              />
-              <Select value={newRole} onValueChange={setNewRole}>
-                <SelectTrigger className="w-28">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={handleAdd} disabled={saving || !newEmail.trim()}>
-                <Plus className="w-4 h-4 mr-1" /> Add
-              </Button>
-            </div>
-          )}
-
-          <ConfirmDialog
-            open={deleteId !== null}
-            onOpenChange={(open) => { if (!open) setDeleteId(null); }}
-            title="Remove User Role"
-            description="Remove this user's role? They will become a viewer and lose the ability to make changes."
-            confirmLabel="Remove"
-            onConfirm={handleDelete}
-            loading={deleting}
+      {isAdmin && (
+        <div className="flex items-center gap-2 mb-6">
+          <Input
+            placeholder="user@finnpartners.com"
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+            className="flex-1"
           />
-        </Card>
-      </div>
+          <Select value={newRole} onValueChange={setNewRole}>
+            <SelectTrigger className="w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="viewer">Viewer</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={handleAdd} disabled={saving || !newEmail.trim()}>
+            <Plus className="w-4 h-4 mr-1" /> Add
+          </Button>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="animate-pulse h-48 bg-white rounded-2xl border border-slate-200"></div>
+      ) : roles?.length === 0 ? (
+        <div className="text-center py-16 px-4 bg-white rounded-3xl border border-slate-200/60 shadow-sm">
+          <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-5">
+            <Users className="w-8 h-8 text-indigo-400" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-900">No users configured</h3>
+          <p className="text-slate-500 max-w-sm mx-auto mt-2">Add an email above to grant admin access.</p>
+        </div>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+              {isAdmin && <TableHead className="w-16"></TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {roles?.map((r) => (
+              <TableRow key={r.id}>
+                <TableCell className="font-medium">{r.email}</TableCell>
+                <TableCell>
+                  <Badge variant={r.role === "admin" ? "default" : "secondary"}>
+                    {r.role}
+                  </Badge>
+                </TableCell>
+                {isAdmin && (
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteId(r.id)}>
+                      <Trash2 className="w-4 h-4 text-rose-500" />
+                    </Button>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+
+      <ConfirmDialog
+        open={deleteId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteId(null); }}
+        title="Remove User Role"
+        description="Remove this user's role? They will become a viewer and lose the ability to make changes."
+        confirmLabel="Remove"
+        onConfirm={handleDelete}
+        loading={deleting}
+      />
     </div>
   );
 }
