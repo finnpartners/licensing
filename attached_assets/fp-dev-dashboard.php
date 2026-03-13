@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 class FP_Dev_Dashboard {
 
-    private $api_base_url    = 'https://licensing.finnpartners.com/api';
+    private $api_base_url    = 'https://wplicense.finnpartners.com/api';
     private $option_name     = 'finn_updater_settings';
     private $installing_slug = '';
 
