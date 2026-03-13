@@ -292,13 +292,15 @@ router.get("/admin/github/repos", async (req, res) => {
     const existingProducts = await db.select({ githubRepo: productsTable.githubRepo }).from(productsTable);
     const existingRepos = new Set(existingProducts.map(p => p.githubRepo.toLowerCase()));
 
-    const result = repoCache.map(r => ({
-      fullName: r.full_name,
-      name: r.name,
-      description: r.description,
-      isPrivate: r.private,
-      alreadyAdded: existingRepos.has(r.full_name.toLowerCase()),
-    }));
+    const result = repoCache
+      .filter(r => r.name.toLowerCase().startsWith("fp-"))
+      .map(r => ({
+        fullName: r.full_name,
+        name: r.name,
+        description: r.description,
+        isPrivate: r.private,
+        alreadyAdded: existingRepos.has(r.full_name.toLowerCase()),
+      }));
 
     res.json(result);
   } catch (err) {
