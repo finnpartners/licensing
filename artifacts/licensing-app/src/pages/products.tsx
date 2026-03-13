@@ -171,10 +171,10 @@ export default function Products() {
                   </button>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-1.5 text-sm text-slate-600">
+                  <a href={`https://github.com/${product.githubRepo}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-indigo-600 transition-colors">
                     <Github className="w-4 h-4" />
                     {product.githubRepo}
-                  </div>
+                  </a>
                 </TableCell>
                 <TableCell>
                   {product.latestVersion ? (
