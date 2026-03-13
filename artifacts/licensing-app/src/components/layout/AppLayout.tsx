@@ -21,8 +21,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <div className="p-6 flex items-center gap-3 border-b border-slate-800">
         <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 12L11 14L15 10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <rect x="3" y="3" width="18" height="18" rx="4" stroke="white" strokeWidth="2"/>
+            <rect x="3" y="11" width="18" height="11" rx="3" stroke="white" strokeWidth="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="white" strokeWidth="2" strokeLinecap="round"/>
           </svg>
         </div>
         <div className="flex flex-col">
