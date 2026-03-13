@@ -279,6 +279,7 @@ export default function Clients() {
                         className="h-6 w-6"
                         onClick={() => license.licenseKey && copyKey(license.licenseKey)}
                         title="Copy license key"
+                        disabled={!isAdmin}
                       >
                         {copied === license.licenseKey ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
                       </Button>
