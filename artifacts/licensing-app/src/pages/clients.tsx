@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,10 +12,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit2, Trash2, Users, Key, Copy, Check, ToggleLeft, ToggleRight, Monitor } from "lucide-react";
+import { Plus, Edit2, Trash2, Users, Key, Copy, Check, ToggleLeft, ToggleRight, Monitor, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { useIsAdmin } from "@/hooks/use-role";
 import { useQuery } from "@tanstack/react-query";
+
+const PAGE_SIZE = 10;
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -66,6 +68,32 @@ export default function Clients() {
   const [domainPluginsDomain, setDomainPluginsDomain] = useState<string | null>(null);
   const [deleteClientId, setDeleteClientId] = useState<number | null>(null);
   const [deleteLicenseId, setDeleteLicenseId] = useState<number | null>(null);
+  const [clientPage, setClientPage] = useState(0);
+  const [licensePage, setLicensePage] = useState(0);
+
+  const sortedClients = useMemo(() => {
+    if (!clients) return [];
+    return [...clients].sort((a, b) => a.name.localeCompare(b.name));
+  }, [clients]);
+
+  const sortedLicenses = useMemo(() => {
+    if (!licenses) return [];
+    return [...licenses].sort((a, b) => (a.clientName || "").localeCompare(b.clientName || ""));
+  }, [licenses]);
+
+  const clientPageCount = Math.max(1, Math.ceil(sortedClients.length / PAGE_SIZE));
+  const pagedClients = sortedClients.slice(clientPage * PAGE_SIZE, (clientPage + 1) * PAGE_SIZE);
+
+  const licensePageCount = Math.max(1, Math.ceil(sortedLicenses.length / PAGE_SIZE));
+  const pagedLicenses = sortedLicenses.slice(licensePage * PAGE_SIZE, (licensePage + 1) * PAGE_SIZE);
+
+  useEffect(() => {
+    if (clientPage >= clientPageCount) setClientPage(Math.max(0, clientPageCount - 1));
+  }, [clientPage, clientPageCount]);
+
+  useEffect(() => {
+    if (licensePage >= licensePageCount) setLicensePage(Math.max(0, licensePageCount - 1));
+  }, [licensePage, licensePageCount]);
 
   const { data: domainPlugins } = useQuery<DomainPlugin[]>({
     queryKey: ["domain-plugins"],
@@ -185,45 +213,50 @@ export default function Clients() {
           <Button onClick={openCreateClient} disabled={!isAdmin}>Add First Client</Button>
         </div>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Licenses</TableHead>
-              <TableHead>Added</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {clients?.map((client) => (
-              <TableRow key={client.id}>
-                <TableCell className="font-semibold text-slate-900">{client.name}</TableCell>
-                <TableCell className="text-slate-600">
-                  {client.email ? (
-                    <a href={`mailto:${client.email}`} className="text-indigo-600 hover:text-indigo-700 hover:underline">{client.email}</a>
-                  ) : "-"}
-                </TableCell>
-                <TableCell>
-                  <span className="inline-flex items-center justify-center bg-slate-100 text-slate-700 font-bold px-2.5 py-0.5 rounded-full text-xs">
-                    {client.licenseCount}
-                  </span>
-                </TableCell>
-                <TableCell className="text-slate-500 text-xs">{formatDate(client.createdAt)}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEditClient(client)} disabled={!isAdmin}>
-                      <Edit2 className="w-4 h-4 text-slate-500" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteClientId(client.id)} disabled={!isAdmin}>
-                      <Trash2 className="w-4 h-4 text-rose-500" />
-                    </Button>
-                  </div>
-                </TableCell>
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Licenses</TableHead>
+                <TableHead>Added</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {pagedClients.map((client) => (
+                <TableRow key={client.id}>
+                  <TableCell className="font-semibold text-slate-900">{client.name}</TableCell>
+                  <TableCell className="text-slate-600">
+                    {client.email ? (
+                      <a href={`mailto:${client.email}`} className="text-indigo-600 hover:text-indigo-700 hover:underline">{client.email}</a>
+                    ) : "-"}
+                  </TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center justify-center bg-slate-100 text-slate-700 font-bold px-2.5 py-0.5 rounded-full text-xs">
+                      {client.licenseCount}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-slate-500 text-xs">{formatDate(client.createdAt)}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEditClient(client)} disabled={!isAdmin}>
+                        <Edit2 className="w-4 h-4 text-slate-500" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteClientId(client.id)} disabled={!isAdmin}>
+                        <Trash2 className="w-4 h-4 text-rose-500" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          {clientPageCount > 1 && (
+            <Pagination page={clientPage} pageCount={clientPageCount} total={sortedClients.length} onPageChange={setClientPage} />
+          )}
+        </>
       )}
 
       <div className="mt-12">
@@ -247,6 +280,7 @@ export default function Clients() {
             <Button onClick={() => openCreateLicense()} disabled={!isAdmin}>Issue First License</Button>
           </div>
         ) : (
+          <div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -261,7 +295,7 @@ export default function Clients() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {licenses?.map((license) => {
+              {pagedLicenses.map((license) => {
                 const domainEntries = domainPlugins?.filter(dp => dp.domain === license.domain) ?? [];
                 const outdatedCount = domainEntries.filter(
                   dp => dp.currentVersion && dp.latestVersion && dp.currentVersion !== dp.latestVersion
@@ -362,6 +396,10 @@ export default function Clients() {
               })}
             </TableBody>
           </Table>
+          {licensePageCount > 1 && (
+            <Pagination page={licensePage} pageCount={licensePageCount} total={sortedLicenses.length} onPageChange={setLicensePage} />
+          )}
+          </div>
         )}
       </div>
 
@@ -603,6 +641,24 @@ export default function Clients() {
         onConfirm={() => { if (deleteLicenseId) licenseMutations.remove.mutate({ id: deleteLicenseId }); }}
         loading={licenseMutations.remove.isPending}
       />
+    </div>
+  );
+}
+
+function Pagination({ page, pageCount, total, onPageChange }: { page: number; pageCount: number; total: number; onPageChange: (p: number) => void }) {
+  const from = page * PAGE_SIZE + 1;
+  const to = Math.min((page + 1) * PAGE_SIZE, total);
+  return (
+    <div className="flex items-center justify-between mt-4 px-1">
+      <span className="text-sm text-slate-500">{from}–{to} of {total}</span>
+      <div className="flex items-center gap-1">
+        <Button variant="outline" size="icon" className="h-8 w-8" disabled={page === 0} onClick={() => onPageChange(page - 1)}>
+          <ChevronLeft className="w-4 h-4" />
+        </Button>
+        <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= pageCount - 1} onClick={() => onPageChange(page + 1)}>
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+      </div>
     </div>
   );
 }
