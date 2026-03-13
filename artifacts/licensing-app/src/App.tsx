@@ -9,6 +9,7 @@ import Dashboard from "@/pages/dashboard";
 import Clients from "@/pages/clients";
 import Products from "@/pages/products";
 import ProductDetail from "@/pages/product-detail";
+import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -55,6 +56,9 @@ function Router() {
       </Route>
       <Route path="/products">
         <AuthGuard><Products /></AuthGuard>
+      </Route>
+      <Route path="/settings">
+        <AuthGuard><Settings /></AuthGuard>
       </Route>
       <Route path="/licenses">
         <Redirect to="/clients" />
