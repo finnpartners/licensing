@@ -379,11 +379,11 @@ class FP_Dev_Dashboard {
                         <table class="form-table">
                             <tr>
                                 <th scope="row" style="padding-top:0;">
-                                    <label for="api_key">Global API Key</label>
+                                    <label for="api_key">FINN API Key</label>
                                 </th>
                                 <td style="padding-top:0;">
                                     <input type="password" id="api_key" name="<?php echo $this->option_name; ?>[api_key]" value="<?php echo esc_attr($settings['api_key']); ?>" class="regular-text" />
-                                    <p class="description" style="margin-top: 8px;">Used only to list available FINN plugins for one-click installation on the Dashboard.</p>
+                                    <p class="description" style="margin-top: 8px;">Used to list available FINN plugins for one-click installation on the Dashboard.</p>
                                 </td>
                             </tr>
                             <tr>
